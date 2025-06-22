@@ -5,7 +5,7 @@
 
    ## Features
    - User-friendly GUI
-   - Supports multiple components and equations of state
+   - Supports multiple components 
    - Calculates density, phase, bubble point, and LHV
 
    ## Requirements
