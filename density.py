@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import (
     QPushButton, QLabel, QGridLayout, QVBoxLayout, QTableWidget,
     QTableWidgetItem, QMessageBox, QHeaderView, QHBoxLayout, QButtonGroup, QRadioButton, QStyleFactory
 )
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer, QObject, pyqtSignal, QThread
 from PyQt6.QtGui import QPalette, QColor
 
 # --- Import the generated UI class ---
@@ -60,6 +60,85 @@ def load_lhv_data(db_path='lhv_data.db'):
         if conn:
             conn.close()
     return loaded_data
+
+# Step 1: Worker class for threaded calculation
+class CalculationWorker(QObject):
+    result = pyqtSignal(dict)
+    error = pyqtSignal(str)
+    finished = pyqtSignal()
+
+    def __init__(self, calculator, lhv_data, comp_names, mol_percents, wt_percents, basis, T_k, pressure_pa, pressure_atm):
+        super().__init__()
+        self.calculator = calculator
+        self.lhv_data = lhv_data
+        self.comp_names = comp_names
+        self.mol_percents = mol_percents
+        self.wt_percents = wt_percents
+        self.basis = basis
+        self.T_k = T_k
+        self.pressure_pa = pressure_pa
+        self.pressure_atm = pressure_atm
+
+    def run(self):
+        try:
+            # --- Convert to mole fractions based on input basis ---
+            mole_fracs_dict = {}
+            if self.basis == "Mol %":
+                total_mol_percent = sum(self.mol_percents)
+                if abs(total_mol_percent - 100.0) > 1e-4 or total_mol_percent == 0:
+                    self.error.emit("Error: Invalid Mol % input.")
+                    self.finished.emit()
+                    return
+                for name, percent in zip(self.comp_names, self.mol_percents):
+                    mole_fracs_dict[name] = percent / 100.0
+            else:
+                total_wt_percent = sum(self.wt_percents)
+                if abs(total_wt_percent - 100.0) > 1e-4 or total_wt_percent == 0:
+                    self.error.emit("Error: Invalid Wt % input.")
+                    self.finished.emit()
+                    return
+                moles = {}
+                total_moles = 0.0
+                for name, percent in zip(self.comp_names, self.wt_percents):
+                    mw = MOLECULAR_WEIGHTS.get(name)
+                    if mw is None or mw <= 0:
+                        self.error.emit(f"Error: Missing or invalid MW for {name}.")
+                        self.finished.emit()
+                        return
+                    moles[name] = (percent / 100.0) * 100.0 / mw
+                    total_moles += moles[name]
+                if total_moles == 0:
+                    self.error.emit("Error: Total moles is zero after Wt% conversion.")
+                    self.finished.emit()
+                    return
+                for name in self.comp_names:
+                    mole_fracs_dict[name] = moles[name] / total_moles
+
+            self.calculator.set_components(mole_fracs_dict)
+
+            # --- Perform Calculations ---
+            mw = self.calculator.calculate_molecular_weight()
+            density_result, phase, error = self.calculator.calculate_density(self.T_k, self.pressure_pa)
+            bubble_point, bp_error = self.calculator.calculate_bubble_point(self.pressure_pa)
+            mixture_lhv, missing_lhv = self.calculator.calculate_lhv(self.lhv_data)
+
+            result_data = {
+                'mw': mw,
+                'density_result': density_result,
+                'phase': phase,
+                'density_error': error,
+                'bubble_point': bubble_point,
+                'bp_error': bp_error,
+                'mixture_lhv': mixture_lhv,
+                'missing_lhv': missing_lhv,
+                'basis': self.basis,
+                'pressure_atm': self.pressure_atm,
+            }
+            self.result.emit(result_data)
+        except Exception as e:
+            import traceback
+            self.error.emit(f"Worker Exception: {e}\n{traceback.format_exc()}")
+        self.finished.emit()
 
 # --- MixtureCalculator Class (do not change this code) ---
 class MixtureCalculator:
@@ -298,6 +377,13 @@ class MainWindow(QMainWindow):
         self.ui = Ui_Dialog()
         self.ui.setupUi(self) # Setup the UI onto this QMainWindow
 
+        # Step 2: Progress bar animation state
+        self.progress_timer = None
+        self.progress_target = 100
+        self.progress_animation_duration = 800  # milliseconds
+        self.progress_animation_start_time = 0
+        self.progress_animation_start_value = 0
+
         # --- Store LHV data and calculator instance ---
         self.lhv_database = lhv_data
         self.lhv_data_loaded = bool(self.lhv_database)
@@ -319,7 +405,7 @@ class MainWindow(QMainWindow):
         self.on_input_basis_changed() # Set initial table state
 
         # Set Window Title (Optional - can also be set in Designer)
-        self.setWindowTitle("Thermo Calculator")
+        self.setWindowTitle("Thermo Calculator - prototype v.0.1")
 
     def populate_comboboxes(self):
         """Populate the ComboBox widgets with options."""
@@ -399,11 +485,17 @@ class MainWindow(QMainWindow):
 
     def update_eos(self):
         """Update the EOS in the calculator when the ComboBox changes."""
+        # Step 5: Reset progress bar to 0 on EOS change
+        if hasattr(self.ui, 'progressBar'):
+            self.ui.progressBar.setValue(0)
         selected_eos = self.ui.comboBox_select_EOS.currentText()
         self.calculator.set_eos(selected_eos)
 
     def add_component(self):
         """Add the selected component to the list and table."""
+        # Step 5: Reset progress bar to 0 on add component
+        if hasattr(self.ui, 'progressBar'):
+            self.ui.progressBar.setValue(0)
         component = self.ui.comboBox_select_components.currentText()
 
         # Don't add the dummy entry or duplicates
@@ -459,6 +551,9 @@ class MainWindow(QMainWindow):
 
     def remove_component(self):
         """Remove the selected component from the list and table."""
+        # Step 5: Reset progress bar to 0 on remove component
+        if hasattr(self.ui, 'progressBar'):
+            self.ui.progressBar.setValue(0)
         selected_list_items = self.ui.selected_components_list.selectedItems()
 
         if not selected_list_items:
@@ -502,6 +597,9 @@ class MainWindow(QMainWindow):
 
     def clear_all(self):
         """Clear all inputs, selections, and results."""
+        # Step 5: Reset progress bar to 0 on clear all
+        if hasattr(self.ui, 'progressBar'):
+            self.ui.progressBar.setValue(0)
         # Clear results_list at the start
         self.clear_results_list()
         # Clear list
@@ -579,6 +677,9 @@ class MainWindow(QMainWindow):
 
     def on_table_item_changed(self, item):
         """Recalculate total when a percentage value changes."""
+        # Step 5: Reset progress bar to 0 on composition change
+        if hasattr(self.ui, 'progressBar'):
+            self.ui.progressBar.setValue(0)
         # Only update if the changed item is in an active percentage column and not the total row
         active_col = 1 if self.ui.radioButton_mol_percent.isChecked() else 2
         if item.column() == active_col and item.row() != self.ui.tableWidget.rowCount() - 1:
@@ -640,181 +741,157 @@ class MainWindow(QMainWindow):
 
     def calculate_and_display(self):
         """Gather inputs, run calculations, and display results."""
+        # Step 3: Set progress bar to 0 at the start of calculation
+        if hasattr(self.ui, 'progressBar'):
+            self.ui.progressBar.setValue(0)
+        # Start animating progress bar to 80% over 1 second as soon as Go! is clicked
+        self.animate_progress_to(80, 1000)
         self.ui.results_list.clear() # Use the new name from gui.py
 
-        # --- Get components and compositions from tableWidget ---
+        # --- Gather inputs for worker ---
         comp_names = []
-        mol_percents = [] # Store as percentages first
+        mol_percents = []
         wt_percents = []
         row_count = self.ui.tableWidget.rowCount() - 1 # Exclude total row
         valid_input = True
-
         for r in range(row_count):
             comp_item = self.ui.tableWidget.item(r, 0)
             mol_item = self.ui.tableWidget.item(r, 1)
             wt_item = self.ui.tableWidget.item(r, 2)
-
-            if not comp_item: continue # Should not happen if added correctly
-
+            if not comp_item: continue
             comp_names.append(comp_item.text())
             try:
-                # Get Mol % (even if column is inactive, read stored value or default to 0)
                 mol_val = float(mol_item.text()) if mol_item and mol_item.text().strip() else 0.0
                 mol_percents.append(mol_val)
             except ValueError:
-                 mol_percents.append(0.0)
-                 if self.ui.radioButton_mol_percent.isChecked(): valid_input = False
-
+                mol_percents.append(0.0)
+                if self.ui.radioButton_mol_percent.isChecked(): valid_input = False
             try:
-                 # Get Wt %
-                 wt_val = float(wt_item.text()) if wt_item and wt_item.text().strip() else 0.0
-                 wt_percents.append(wt_val)
+                wt_val = float(wt_item.text()) if wt_item and wt_item.text().strip() else 0.0
+                wt_percents.append(wt_val)
             except ValueError:
-                 wt_percents.append(0.0)
-                 if self.ui.radioButton_wt_percent.isChecked(): valid_input = False
+                wt_percents.append(0.0)
+                if self.ui.radioButton_wt_percent.isChecked(): valid_input = False
 
         if not valid_input:
-             self.ui.results_list.addItem("Error: Invalid numeric input in composition table.")
-             return
+            self.ui.results_list.addItem("Error: Invalid numeric input in composition table.")
+            self.animate_progress_to(100, 500)
+            return
         if not comp_names:
-             self.ui.results_list.addItem("Error: No components selected.")
-             return
+            self.ui.results_list.addItem("Error: No components selected.")
+            self.animate_progress_to(100, 500)
+            return
 
-        # --- Convert to mole fractions based on input basis ---
-        mole_fracs_dict = {} # Final {name: mole_fraction}
-        if self.ui.radioButton_mol_percent.isChecked():
-            basis = "Mol %"
-            total_mol_percent = sum(mol_percents)
-            if abs(total_mol_percent - 100.0) > 1e-4 : # Check sum is 100%
-                self.ui.results_list.addItem("Error: Total Mol % does not sum to 100.")
-                return
-            if total_mol_percent == 0:
-                 self.ui.results_list.addItem("Error: Total Mol % is zero.")
-                 return
-            # Convert valid % to fractions
-            for name, percent in zip(comp_names, mol_percents):
-                 mole_fracs_dict[name] = percent / 100.0
-
-        else: # Wt % basis
-            basis = "Wt %"
-            total_wt_percent = sum(wt_percents)
-            if abs(total_wt_percent - 100.0) > 1e-4:
-                self.ui.results_list.addItem("Error: Total Wt % does not sum to 100.")
-                return
-            if total_wt_percent == 0:
-                 self.ui.results_list.addItem("Error: Total Wt % is zero.")
-                 return
-
-            # Convert Wt % to mole fractions
-            moles = {}
-            total_moles = 0.0
-            conversion_possible = True
-            for name, percent in zip(comp_names, wt_percents):
-                mw = MOLECULAR_WEIGHTS.get(name)
-                if mw is None or mw <= 0:
-                    self.ui.results_list.addItem(f"Error: Missing or invalid MW for {name}.")
-                    conversion_possible = False
-                    break
-                # Calculate moles based on 100g total mass assumption
-                moles[name] = (percent / 100.0) * 100.0 / mw # (wt_frac * total_mass) / mw
-                total_moles += moles[name]
-
-            if not conversion_possible: return
-            if total_moles == 0:
-                self.ui.results_list.addItem("Error: Total moles is zero after Wt% conversion.")
-                return
-
-            for name in comp_names:
-                mole_fracs_dict[name] = moles[name] / total_moles
-
-        # --- Set components in calculator ---
-        self.calculator.set_components(mole_fracs_dict)
-
-        # --- Get Temperature and Pressure ---
+        basis = "Mol %" if self.ui.radioButton_mol_percent.isChecked() else "Wt %"
         try:
             temp_text = self.ui.comboBox_select_temperature.currentText()
             T_c = float(temp_text.split("°")[0])
             T_k = T_c + 273.15
         except ValueError:
             self.ui.results_list.addItem("Error: Invalid Temperature selection.")
-            return # Or use default T_k = 273.15 + 15.0
-
+            self.animate_progress_to(100, 500)
+            return
         try:
             pressure_text = self.ui.comboBox_select_pressure.currentText()
             pressure_atm = float(pressure_text.split(" ")[0])
             pressure_pa = pressure_atm * 101325.0
-            if pressure_pa <=0: raise ValueError("Pressure must be positive")
+            if pressure_pa <= 0: raise ValueError("Pressure must be positive")
         except ValueError:
             self.ui.results_list.addItem("Error: Invalid Pressure selection.")
-            return # Or use default pressure_pa = 101325.0
+            self.animate_progress_to(100, 500)
+            return
 
-        # --- Perform Calculations ---
-        self.ui.results_list.addItem(f"Calculating for {basis} basis...")
+        # --- Threaded calculation setup ---
+        self.ui.go_button.setEnabled(False)
+        self.worker_thread = QThread()
+        self.worker = CalculationWorker(
+            calculator=self.calculator,
+            lhv_data=self.lhv_database,
+            comp_names=comp_names,
+            mol_percents=mol_percents,
+            wt_percents=wt_percents,
+            basis=basis,
+            T_k=T_k,
+            pressure_pa=pressure_pa,
+            pressure_atm=pressure_atm
+        )
+        self.worker.moveToThread(self.worker_thread)
+        self.worker.result.connect(self.on_calculation_result)
+        self.worker.error.connect(self.on_calculation_error)
+        self.worker.finished.connect(self.on_calculation_finished)
+        self.worker_thread.started.connect(self.worker.run)
+        self.worker.finished.connect(self.worker_thread.quit)
+        self.worker.finished.connect(self.worker.deleteLater)
+        self.worker_thread.finished.connect(self.worker_thread.deleteLater)
+        self.worker_thread.start()
+        return
 
-        mw = self.calculator.calculate_molecular_weight()
-        self.ui.results_list.addItem(f"Avg. Molecular Wt: {mw:.2f} g/mol")
-
-
-
-        # --- Density Calculation Call ---
-        # Now expects return: density_result, phase_str, error_str
-        density_result, phase, error = self.calculator.calculate_density(T_k, pressure_pa)
-
-        # --- Adjusted Result Display ---
+    def on_calculation_result(self, result_data):
+        # Update the UI with calculation results (runs in main thread)
+        self.ui.results_list.clear()
+        self.ui.results_list.addItem(f"Calculating for {result_data['basis']} basis...")
+        self.ui.results_list.addItem(f"Avg. Molecular Wt: {result_data['mw']:.2f} g/mol")
+        # Density/Phase
+        density_result = result_data['density_result']
+        phase = result_data['phase']
+        error = result_data['density_error']
         if error:
             self.ui.results_list.addItem(f"Density/Phase Error: {error}")
-        # Check phase string AND if density_result is not None (important!)
         elif phase == "Two-Phase" and density_result is not None:
-             # density_result should be a tuple (liq, gas)
-             if isinstance(density_result, tuple) and len(density_result) == 2:
-                  density_liq, density_gas = density_result
-                  self.ui.results_list.addItem(f"Phase @(T,P): {phase}") # Display phase
-                  # Only display densities if they are valid numbers
-                  if density_liq is not None:
-                      self.ui.results_list.addItem(f"  Density (Liq): {density_liq:.3f} kg/m³")
-                  else:
-                      self.ui.results_list.addItem(f"  Density (Liq): Calculation Failed")
-                  if density_gas is not None:
-                      self.ui.results_list.addItem(f"  Density (Vap): {density_gas:.3f} kg/m³")
-                  else:
-                       self.ui.results_list.addItem(f"  Density (Vap): Calculation Failed")
-             else:
-                  # Should not happen if calculate_density returns correctly
-                  self.ui.results_list.addItem(f"Phase: {phase} (Result format unexpected)")
-
+            if isinstance(density_result, tuple) and len(density_result) == 2:
+                density_liq, density_gas = density_result
+                self.ui.results_list.addItem(f"Phase @(T,P): {phase}")
+                if density_liq is not None:
+                    self.ui.results_list.addItem(f"  Density (Liq): {density_liq:.3f} kg/m³")
+                else:
+                    self.ui.results_list.addItem(f"  Density (Liq): Calculation Failed")
+                if density_gas is not None:
+                    self.ui.results_list.addItem(f"  Density (Vap): {density_gas:.3f} kg/m³")
+                else:
+                    self.ui.results_list.addItem(f"  Density (Vap): Calculation Failed")
+            else:
+                self.ui.results_list.addItem(f"Phase: {phase} (Result format unexpected)")
         elif phase == "Liquid" and density_result is not None:
-             self.ui.results_list.addItem(f"Phase @(T,P): {phase}")
-             self.ui.results_list.addItem(f"  Density: {density_result:.3f} kg/m³")
+            self.ui.results_list.addItem(f"Phase @(T,P): {phase}")
+            self.ui.results_list.addItem(f"  Density: {density_result:.3f} kg/m³")
         elif phase == "Vapor" and density_result is not None:
-             self.ui.results_list.addItem(f"Phase @(T,P): {phase}")
-             self.ui.results_list.addItem(f"  Density: {density_result:.3f} kg/m³")
-        elif phase: # Phase determined but density calculation failed
-             self.ui.results_list.addItem(f"Phase @(T,P): {phase}")
-             self.ui.results_list.addItem(f"  Density: Calculation Failed")
-        else: # No phase determined and likely an error occurred before returning
-             self.ui.results_list.addItem(f"Density/Phase: Could not determine.")
-
-        # Bubble Point Calculation
-        bubble_point, bp_error = self.calculator.calculate_bubble_point(pressure_pa)
+            self.ui.results_list.addItem(f"Phase @(T,P): {phase}")
+            self.ui.results_list.addItem(f"  Density: {density_result:.3f} kg/m³")
+        elif phase:
+            self.ui.results_list.addItem(f"Phase @(T,P): {phase}")
+            self.ui.results_list.addItem(f"  Density: Calculation Failed")
+        else:
+            self.ui.results_list.addItem(f"Density/Phase: Could not determine.")
+        # Bubble Point
+        bubble_point = result_data['bubble_point']
+        bp_error = result_data['bp_error']
+        pressure_atm = result_data['pressure_atm']
         if bp_error:
             self.ui.results_list.addItem(f"Bubble Point Error: {bp_error}")
         elif bubble_point is not None:
             self.ui.results_list.addItem(f"Bubble Point @ {pressure_atm} atm: {bubble_point:.2f} °C")
         else:
             self.ui.results_list.addItem(f"Bubble Point: Calculation failed.")
-
-
-        # LHV Calculation
+        # LHV
         if self.lhv_data_loaded:
-            mixture_lhv, missing_lhv = self.calculator.calculate_lhv(self.lhv_database)
+            mixture_lhv = result_data['mixture_lhv']
+            missing_lhv = result_data['missing_lhv']
             if missing_lhv:
                 self.ui.results_list.addItem(f"LHV Warning: No data for: {', '.join(missing_lhv)}")
-            self.ui.results_list.addItem("-" * 40) # Separator
+            self.ui.results_list.addItem("-" * 40)
             self.ui.results_list.addItem(f"Mixture LHV = {mixture_lhv:.2f} MJ/Nm³")
         else:
             self.ui.results_list.addItem("-" * 40)
             self.ui.results_list.addItem("Mixture LHV = N/A (DB not loaded)")
+        self.animate_progress_to(100, 500)
 
+    def on_calculation_error(self, error_msg):
+        self.ui.results_list.clear()
+        self.ui.results_list.addItem(error_msg)
+        self.animate_progress_to(100, 500)
+
+    def on_calculation_finished(self):
+        self.ui.go_button.setEnabled(True)
 
     def normalize_composition(self):
         """Normalize the active composition column (mol% or wt%) so the sum is 100%."""
@@ -864,11 +941,53 @@ class MainWindow(QMainWindow):
 
     def on_temperature_or_pressure_changed(self):
         """Clear the results_list when temperature or pressure is changed."""
+        # Step 5: Reset progress bar to 0 on T/P change
+        if hasattr(self.ui, 'progressBar'):
+            self.ui.progressBar.setValue(0)
         self.ui.results_list.clear()
 
     def clear_results_list(self):
         """Clear the results_list widget."""
         self.ui.results_list.clear()
+
+    def animate_progress_to(self, target_value, duration_ms=500):
+        """Animate the progress bar to the target value over the given duration (ms)."""
+        if not hasattr(self.ui, 'progressBar'):
+            return
+        # Stop any existing timer
+        if self.progress_timer is not None:
+            self.progress_timer.stop()
+            self.progress_timer.deleteLater()
+            self.progress_timer = None
+        # Set up animation state
+        self.progress_target = target_value
+        self.progress_animation_duration = duration_ms
+        self.progress_animation_start_value = self.ui.progressBar.value()
+        self.progress_animation_start_time = QTimer().remainingTime()  # Not used, will use QElapsedTimer below
+
+        # Use QElapsedTimer to track elapsed time
+        from PyQt6.QtCore import QElapsedTimer
+        self._progress_animation_timer = QElapsedTimer()
+        self._progress_animation_timer.start()
+
+        def update_progress():
+            elapsed = self._progress_animation_timer.elapsed()
+            if elapsed >= self.progress_animation_duration:
+                self.ui.progressBar.setValue(self.progress_target)
+                if self.progress_timer is not None:
+                    self.progress_timer.stop()
+                    self.progress_timer.deleteLater()
+                    self.progress_timer = None
+                return
+            # Linear interpolation
+            start = self.progress_animation_start_value
+            end = self.progress_target
+            value = start + (end - start) * (elapsed / self.progress_animation_duration)
+            self.ui.progressBar.setValue(int(value))
+
+        self.progress_timer = QTimer(self)
+        self.progress_timer.timeout.connect(update_progress)
+        self.progress_timer.start(20)
 
 
 # --- Main Execution Block (Modified) ---
