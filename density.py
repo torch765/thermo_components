@@ -61,6 +61,13 @@ def load_lhv_data(db_path='lhv_data.db'):
             conn.close()
     return loaded_data
 
+# Helper to find resource files in both dev and PyInstaller bundle
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
+
 # Step 1: Worker class for threaded calculation
 class CalculationWorker(QObject):
     result = pyqtSignal(dict)
@@ -1003,7 +1010,7 @@ def main():
     #app.setStyle(QStyleFactory.create("WindowsVista"))
 
     # Load the LHV data before creating the window
-    lhv_data_for_app = load_lhv_data()
+    lhv_data_for_app = load_lhv_data(resource_path('lhv_data.db'))
 
     # Create and show the main window, passing LHV data
     window = MainWindow(lhv_data=lhv_data_for_app)
