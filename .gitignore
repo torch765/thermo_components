@@ -5,4 +5,6 @@ __pycache__/
 .vscode/
 build/
 dist/
+Thermo_Report_*.xlsx
+.venv-package-backup-*/
 

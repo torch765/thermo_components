@@ -8,12 +8,15 @@
    - Supports multiple components 
    - Calculates density at selected conditions, normal conditions, and standard conditions
    - Calculates phase, bubble point, and LHV
+   - Shows non-modal warning messages for water-containing systems when using `PRMIX`
+   - Automatically overrides pure-water calculations to `IAPWS-95`
 
    ## Requirements
    - Python 3.x
    - PyQt6
    - thermo
    - openpyxl (required for Excel report export)
+   - Install the validated app stack with `python -m pip install -r requirements.txt`
 
    ## Usage
    1. Run `python density.py`
@@ -25,6 +28,14 @@
       - density at normal conditions for `Nm3` basis support
       - density at standard conditions for `Sm3` / standard liquid basis support
       - phase, bubble point, and LHV
+      - persistent thermo warnings when water is present with `PRMIX`
+
+   ## Thermo Warnings
+   - The main thermo tab now shows a visible, non-modal warning banner above the Results area when water is present.
+   - `PRMIX` may be unreliable for aqueous or polar behavior, so water-containing results should be treated with caution.
+   - Pure water no longer uses the default `PRMIX` route; it automatically switches to `IAPWS-95`, so the warning banner is suppressed in that special case.
+   - Water-containing mixtures still use the default `PRMIX` route and therefore still show warnings.
+   - The exported Excel report includes the same warning text in a dedicated `Warnings` section when applicable.
 
    ## Reference Density Bases
    - Normal conditions = `0 °C`, `1 atm`

@@ -3,6 +3,7 @@ import sqlite3
 import os # To check if DB file exists
 from datetime import datetime
 
+from chemicals import iapws as chemicals_iapws
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QComboBox, QListWidget,
     QPushButton, QLabel, QGridLayout, QVBoxLayout, QTableWidget,
@@ -17,7 +18,7 @@ from gui import Ui_Dialog
 # THERMO FLASH INTERFACE IMPORTS
 # NOTE: Make sure PRMIX is imported if it's the only option for now
 # If you add SRKMIX later, you'll need: from thermo.eos_mix import PRMIX, SRKMIX
-from thermo import ChemicalConstantsPackage, CEOSGas, CEOSLiquid, FlashVL, PRMIX, FlashPureVLS
+from thermo import ChemicalConstantsPackage, CEOSGas, CEOSLiquid, FlashVL, PRMIX, FlashPureVLS, IAPWS95
 # from thermo.eos_mix import PRMIX # Explicit import if needed
 
 
@@ -79,6 +80,21 @@ FLOW_UNIT_DEFINITIONS = {
     "MSCFD": {"dimension": "ref_volume", "basis": "standard", "amount_to_base": 1000.0 * M3_PER_FT3, "time_to_day": 1.0},
     "MMSCFD": {"dimension": "ref_volume", "basis": "standard", "amount_to_base": 1_000_000.0 * M3_PER_FT3, "time_to_day": 1.0},
 }
+
+WATER_COMPONENT_ALIASES = {"water", "h2o"}
+PURE_WATER_WARNING_FRACTION = 0.999
+PURE_WATER_ROUTE = "iapws95_pure_water"
+PRMIX_DEFAULT_ROUTE = "prmix_default"
+IAPWS95_MODEL_DISPLAY = "IAPWS-95"
+IAPWS95_TWO_PHASE_REL_TOL = 1e-4
+PRMIX_WATER_WARNING = (
+    "Warning: Water is present. PRMIX results may be unreliable for aqueous or polar behavior. "
+    "Use with caution."
+)
+PRMIX_TWO_PHASE_WATER_WARNING = (
+    "Warning: Water-containing two-phase behavior may be unreliable with PRMIX. "
+    "Validate density and phase behavior with a water-capable method."
+)
 
 def load_lhv_data(db_path='lhv_data.db'):
     """Loads LHV data from the SQLite database and returns it."""
@@ -223,6 +239,111 @@ def build_density_note(phase, error) -> str:
     return ""
 
 
+def normalize_component_identity(name: str) -> str:
+    """Normalize a component identifier for warning checks."""
+    cleaned = str(name).strip().lower()
+    compact = "".join(character for character in cleaned if character.isalnum())
+    if compact == "h2o":
+        return "water"
+    return cleaned
+
+
+def is_water_component(name: str) -> bool:
+    """Return True when the component name maps to water."""
+    return normalize_component_identity(name) in WATER_COMPONENT_ALIASES
+
+
+def _active_basis_amount_rows(comp_names, mol_percents, wt_percents, basis: str) -> tuple[list[tuple[str, float]], float]:
+    """Return positive active-basis amounts keyed by normalized component identity."""
+    active_values = mol_percents if basis == "Mol %" else wt_percents
+    rows = []
+    total_active = 0.0
+
+    for comp_name, raw_value in zip(comp_names, active_values):
+        try:
+            value = float(raw_value)
+        except (TypeError, ValueError):
+            continue
+
+        if value <= 0:
+            continue
+
+        rows.append((normalize_component_identity(comp_name), value))
+        total_active += value
+
+    return rows, total_active
+
+
+def has_water_component(comp_names, mol_percents, wt_percents, basis: str) -> bool:
+    """Return True when water is present at a non-zero amount on the active basis."""
+    rows, _ = _active_basis_amount_rows(comp_names, mol_percents, wt_percents, basis)
+    return any(is_water_component(name) for name, _ in rows)
+
+
+def water_fraction_active_basis(comp_names, mol_percents, wt_percents, basis: str) -> float:
+    """Return the water fraction on the active input basis."""
+    rows, total_active = _active_basis_amount_rows(comp_names, mol_percents, wt_percents, basis)
+    if total_active <= 0:
+        return 0.0
+    water_active = sum(value for name, value in rows if is_water_component(name))
+    return water_active / total_active
+
+
+def is_effectively_pure_water(comp_names, mol_percents, wt_percents, basis: str) -> bool:
+    """Return True when the active-basis composition is effectively pure water."""
+    rows, total_active = _active_basis_amount_rows(comp_names, mol_percents, wt_percents, basis)
+    if total_active <= 0:
+        return False
+
+    water_active = sum(value for name, value in rows if is_water_component(name))
+    other_active = total_active - water_active
+    if water_active <= 0:
+        return False
+
+    water_fraction = water_active / total_active
+    other_fraction = other_active / total_active
+    return water_fraction >= PURE_WATER_WARNING_FRACTION and other_fraction <= (1.0 - PURE_WATER_WARNING_FRACTION)
+
+
+def select_thermo_route(comp_names, mol_percents, wt_percents, basis: str, default_eos: str) -> dict:
+    """Select the thermo route for the current composition."""
+    if is_effectively_pure_water(comp_names, mol_percents, wt_percents, basis):
+        return {
+            "route_id": PURE_WATER_ROUTE,
+            "model_display": IAPWS95_MODEL_DISPLAY,
+        }
+    return {
+        "route_id": PRMIX_DEFAULT_ROUTE,
+        "model_display": str(default_eos or "PRMIX").strip() or "PRMIX",
+    }
+
+
+def phase_indicates_two_phase(phase) -> bool:
+    """Return True when the phase text indicates two-phase behavior."""
+    return "two-phase" in str(phase or "").strip().lower()
+
+
+def build_thermo_warning_messages(comp_names, mol_percents, wt_percents, basis: str, thermo_route: str, result_data: dict) -> list[str]:
+    """Build the persistent thermo warnings shown in the main tab and export."""
+    if thermo_route != PRMIX_DEFAULT_ROUTE:
+        return []
+
+    if not has_water_component(comp_names, mol_percents, wt_percents, basis):
+        return []
+
+    messages = []
+    messages.append(PRMIX_WATER_WARNING)
+
+    has_two_phase_warning_condition = any(
+        phase_indicates_two_phase(result_data.get(key))
+        for key in ("phase", "density_normal_phase", "density_standard_phase")
+    )
+    if has_two_phase_warning_condition:
+        messages.append(PRMIX_TWO_PHASE_WATER_WARNING)
+
+    return messages
+
+
 def parse_flow_input(text: str) -> float | None:
     """Parse a flow input, tolerating spaces and thousands separators."""
     cleaned = str(text).strip().replace(",", "").replace(" ", "")
@@ -360,23 +481,44 @@ class CalculationWorker(QObject):
                     mole_fracs_dict[name] = moles[name] / total_moles
 
             self.calculator.set_components(mole_fracs_dict)
+            thermo_route = select_thermo_route(
+                self.comp_names,
+                self.mol_percents,
+                self.wt_percents,
+                self.basis,
+                self.calculator.eos,
+            )
 
             # --- Perform Calculations ---
             mw = self.calculator.calculate_molecular_weight()
-            density_result, phase, error = self.calculator.calculate_density(self.T_k, self.pressure_pa)
-            density_normal_result, density_normal_phase, density_normal_error = self.calculator.calculate_density(
+            density_result, phase, error = self.calculator.calculate_density_for_route(
+                self.T_k,
+                self.pressure_pa,
+                thermo_route["route_id"],
+            )
+            density_normal_result, density_normal_phase, density_normal_error = self.calculator.calculate_density_for_route(
                 celsius_to_kelvin(NORMAL_T_C),
                 atm_to_pa(NORMAL_P_ATM),
+                thermo_route["route_id"],
             )
-            density_standard_result, density_standard_phase, density_standard_error = self.calculator.calculate_density(
+            density_standard_result, density_standard_phase, density_standard_error = self.calculator.calculate_density_for_route(
                 celsius_to_kelvin(STANDARD_T_C),
                 atm_to_pa(STANDARD_P_ATM),
+                thermo_route["route_id"],
             )
-            bubble_point, bp_error = self.calculator.calculate_bubble_point(self.pressure_pa)
+            bubble_point, bp_error = self.calculator.calculate_bubble_point_for_route(
+                self.pressure_pa,
+                thermo_route["route_id"],
+            )
             mixture_lhv, missing_lhv = self.calculator.calculate_lhv(self.lhv_data)
 
             result_data = {
                 'mw': mw,
+                'comp_names': list(self.comp_names),
+                'mol_percents': list(self.mol_percents),
+                'wt_percents': list(self.wt_percents),
+                'thermo_route': thermo_route["route_id"],
+                'model_display': thermo_route["model_display"],
                 'density_result': density_result,
                 'phase': phase,
                 'density_error': error,
@@ -398,8 +540,17 @@ class CalculationWorker(QObject):
                 'mixture_lhv': mixture_lhv,
                 'missing_lhv': missing_lhv,
                 'basis': self.basis,
+                'eos': self.calculator.eos,
                 'pressure_atm': self.pressure_atm,
             }
+            result_data['warnings'] = build_thermo_warning_messages(
+                self.comp_names,
+                self.mol_percents,
+                self.wt_percents,
+                self.basis,
+                thermo_route["route_id"],
+                result_data,
+            )
             self.result.emit(result_data)
         except Exception as e:
             import traceback
@@ -438,6 +589,67 @@ class MixtureCalculator:
             mw_sum += mw * mole_frac
         # The average MW doesn't depend on the sum of fractions if normalized
         return mw_sum # / frac_sum if frac_sum > 0 else 0.0 -> removed as normalized
+
+    def calculate_density_for_route(self, temperature_k, pressure_pa, route_id):
+        """Dispatch density calculation to the selected thermo route."""
+        if route_id == PURE_WATER_ROUTE:
+            return self.calculate_pure_water_density_iapws95(temperature_k, pressure_pa)
+        return self.calculate_density(temperature_k, pressure_pa)
+
+    def calculate_bubble_point_for_route(self, pressure_pa, route_id):
+        """Dispatch bubble-point/saturation calculation to the selected thermo route."""
+        if route_id == PURE_WATER_ROUTE:
+            return self.calculate_pure_water_bubble_point_iapws95(pressure_pa)
+        return self.calculate_bubble_point(pressure_pa)
+
+    def calculate_pure_water_density_iapws95(self, temperature_k, pressure_pa):
+        """Calculate pure-water density using the local IAPWS-95 implementation."""
+        if temperature_k is None or pressure_pa is None:
+            return None, None, "Missing temperature or pressure."
+        if temperature_k <= 0 or pressure_pa <= 0:
+            return None, None, "Temperature and pressure must be positive."
+
+        try:
+            phase_label = None
+            critical_t = IAPWS95.Tc
+            critical_p = IAPWS95.Pc
+
+            if 235.0 <= temperature_k < critical_t and pressure_pa < critical_p:
+                psat = chemicals_iapws.iapws95_Psat(temperature_k)
+                relative_difference = abs(pressure_pa - psat) / max(psat, 1.0)
+                if relative_difference <= IAPWS95_TWO_PHASE_REL_TOL:
+                    density_liq = chemicals_iapws.iapws95_rhol_sat(temperature_k)
+                    density_gas = chemicals_iapws.iapws95_rhog_sat(temperature_k)
+                    return (density_liq, density_gas), "Two-Phase", None
+                phase_label = "Liquid" if pressure_pa > psat else "Vapor"
+            elif temperature_k >= critical_t and pressure_pa >= critical_p:
+                phase_label = "Supercritical"
+            elif temperature_k >= critical_t:
+                phase_label = "Vapor"
+            elif pressure_pa >= critical_p:
+                phase_label = "Liquid"
+
+            water_state = IAPWS95(T=temperature_k, P=pressure_pa, zs=[1.0])
+            density_mass = water_state.rho_mass()
+
+            if phase_label is None:
+                phase_label = "Liquid" if density_mass >= 200.0 else "Vapor"
+
+            return density_mass, phase_label, None
+        except Exception as exc:
+            return None, None, f"IAPWS-95 pure-water density failed: {exc}"
+
+    def calculate_pure_water_bubble_point_iapws95(self, pressure_pa):
+        """Calculate pure-water saturation temperature using IAPWS-95."""
+        if pressure_pa is None or pressure_pa <= 0:
+            return None, "Pressure must be positive."
+
+        try:
+            saturation_temperature_k = chemicals_iapws.iapws95_Tsat(pressure_pa)
+        except Exception as exc:
+            return None, f"IAPWS-95 saturation calculation failed: {exc}"
+
+        return saturation_temperature_k - 273.15, None
 
 
     def calculate_density(self, temperature_k, pressure_pa):
@@ -666,6 +878,7 @@ class MainWindow(QMainWindow):
         # --- Populate widgets ---
         self.populate_comboboxes()
         self.setup_table()
+        self.setup_thermo_warning_banner()
         self.setup_flow_tab()
 
         # --- Connect signals ---
@@ -782,9 +995,95 @@ class MainWindow(QMainWindow):
         self.density_actual_kg_m3 = None
         self.density_normal_kg_m3 = None
         self.density_standard_kg_m3 = None
+        self.set_thermo_warning_messages([])
         if clear_visible_results:
             self.ui.results_list.clear()
         self.update_flow_conversion()
+
+    def setup_thermo_warning_banner(self):
+        """Create a persistent, non-modal warning banner above the main results area."""
+        self.thermo_warning_label = QLabel(self.ui.tab)
+        self.thermo_warning_label.setObjectName("thermoWarningLabel")
+        self.thermo_warning_label.setWordWrap(True)
+        self.thermo_warning_label.setTextFormat(Qt.TextFormat.PlainText)
+        self.thermo_warning_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+        self.thermo_warning_label.setMargin(8)
+        self.thermo_warning_label.setStyleSheet(
+            "QLabel#thermoWarningLabel {"
+            "background-color: rgb(255, 244, 204);"
+            "color: rgb(122, 63, 0);"
+            "border: 1px solid rgb(230, 184, 0);"
+            "border-radius: 4px;"
+            "}"
+        )
+        self.thermo_warning_label.hide()
+
+        self._results_label_base_geometry = self.ui.results_label.geometry()
+        self._results_list_base_geometry = self.ui.results_list.geometry()
+        self._progress_bar_base_geometry = self.ui.progressBar.geometry() if hasattr(self.ui, "progressBar") else None
+        self._warning_banner_y = self.ui.groupBox.geometry().bottom() + 8
+
+    def set_thermo_warning_messages(self, warning_messages: list[str]):
+        """Show or hide the persistent thermo warning banner."""
+        if not hasattr(self, "thermo_warning_label"):
+            return
+
+        cleaned_messages = [str(message).strip() for message in warning_messages if str(message).strip()]
+        if not cleaned_messages:
+            self.thermo_warning_label.hide()
+            self.ui.results_label.setGeometry(self._results_label_base_geometry)
+            self.ui.results_list.setGeometry(self._results_list_base_geometry)
+            if self._progress_bar_base_geometry is not None:
+                self.ui.progressBar.setGeometry(self._progress_bar_base_geometry)
+            return
+
+        warning_text = "\n".join(cleaned_messages)
+        banner_width = self._results_list_base_geometry.width()
+        text_rect = self.thermo_warning_label.fontMetrics().boundingRect(
+            0,
+            0,
+            banner_width - 16,
+            1000,
+            int(Qt.TextFlag.TextWordWrap),
+            warning_text,
+        )
+        banner_height = max(44, text_rect.height() + 16)
+        self.thermo_warning_label.setText(warning_text)
+        self.thermo_warning_label.setGeometry(
+            self._results_list_base_geometry.x(),
+            self._warning_banner_y,
+            banner_width,
+            banner_height,
+        )
+        self.thermo_warning_label.show()
+        self.thermo_warning_label.raise_()
+
+        results_label_y = self._warning_banner_y + banner_height + 8
+        self.ui.results_label.setGeometry(
+            self._results_label_base_geometry.x(),
+            results_label_y,
+            self._results_label_base_geometry.width(),
+            self._results_label_base_geometry.height(),
+        )
+
+        list_y_offset = self._results_list_base_geometry.y() - self._results_label_base_geometry.y()
+        results_list_y = results_label_y + list_y_offset
+        base_results_bottom = self._results_list_base_geometry.y() + self._results_list_base_geometry.height()
+        results_list_height = max(100, base_results_bottom - results_list_y)
+        self.ui.results_list.setGeometry(
+            self._results_list_base_geometry.x(),
+            results_list_y,
+            self._results_list_base_geometry.width(),
+            results_list_height,
+        )
+
+        if self._progress_bar_base_geometry is not None:
+            self.ui.progressBar.setGeometry(
+                self._progress_bar_base_geometry.x(),
+                base_results_bottom + 8,
+                self._progress_bar_base_geometry.width(),
+                self._progress_bar_base_geometry.height(),
+            )
 
     def get_export_base_dir(self):
         """Return the directory where generated reports should be saved."""
@@ -802,11 +1101,14 @@ class MainWindow(QMainWindow):
         basis = self.last_result_data.get("basis") if self.last_result_data else (
             "Mol %" if self.ui.radioButton_mol_percent.isChecked() else "Wt %"
         )
+        model_display = self.last_result_data.get("model_display") if self.last_result_data else (
+            self.ui.comboBox_select_EOS.currentText()
+        )
         return [
             ("Basis", basis),
             ("Temperature", self.ui.comboBox_select_temperature.currentText()),
             ("Pressure", self.ui.comboBox_select_pressure.currentText()),
-            ("EOS", self.ui.comboBox_select_EOS.currentText()),
+            ("Model / EOS", model_display),
         ]
 
     def _coerce_report_value(self, text: str):
@@ -832,6 +1134,25 @@ class MainWindow(QMainWindow):
                 "Wt %": self._coerce_report_value(wt_item.text() if wt_item else ""),
             })
         return rows
+
+    def build_report_warning_rows(self, result_data):
+        """Build structured warning rows for the export report."""
+        warning_rows = []
+
+        for warning_message in result_data.get("warnings") or []:
+            warning_rows.append({
+                "Warning Type": "Thermo",
+                "Details": warning_message,
+            })
+
+        missing_lhv = result_data.get("missing_lhv") or []
+        if missing_lhv:
+            warning_rows.append({
+                "Warning Type": "LHV",
+                "Details": f"LHV Warning: No data for: {', '.join(missing_lhv)}",
+            })
+
+        return warning_rows
 
     def build_results_rows(self, result_data):
         """Build structured result rows for report export without scraping the UI."""
@@ -899,12 +1220,13 @@ class MainWindow(QMainWindow):
         bubble_point_label = f"Bubble point @ {pressure_atm:g} atm" if pressure_atm is not None else "Bubble point"
         bubble_point = result_data.get("bubble_point")
         bp_error = result_data.get("bp_error")
+        bubble_point_note = "IAPWS-95 saturation temperature for pure water." if result_data.get("thermo_route") == PURE_WATER_ROUTE else ""
         if bp_error:
             add_row(bubble_point_label, "N/A", "°C", bp_error)
         elif bubble_point is not None:
-            add_row(bubble_point_label, bubble_point, "°C")
+            add_row(bubble_point_label, bubble_point, "°C", bubble_point_note)
         else:
-            add_row(bubble_point_label, "Calculation Failed", "°C")
+            add_row(bubble_point_label, "Calculation Failed", "°C", bubble_point_note)
 
         if self.lhv_data_loaded:
             lhv_display_values = build_lhv_display_values(result_data.get("mixture_lhv", 0.0), result_data.get("mw", 0.0))
@@ -923,10 +1245,6 @@ class MainWindow(QMainWindow):
                     unit,
                     mass_note if index == 0 else "",
                 )
-
-            missing_lhv = result_data.get("missing_lhv") or []
-            if missing_lhv:
-                add_row("LHV Warning", ", ".join(missing_lhv), "", "No LHV data for selected components.")
         else:
             add_row("LHV data", "N/A", "", "LHV database not loaded.")
 
@@ -1036,6 +1354,20 @@ class MainWindow(QMainWindow):
             worksheet.cell(row=row_index, column=1).alignment = left_alignment
             row_index += 1
 
+        warning_rows = self.build_report_warning_rows(self.last_result_data)
+        if warning_rows:
+            row_index += 1
+            row_index = write_section_header(row_index, "Warnings")
+            row_index = write_table_header(row_index, ["Warning Type", "Details"])
+            for warning_row in warning_rows:
+                worksheet.cell(row=row_index, column=1, value=warning_row["Warning Type"])
+                worksheet.cell(row=row_index, column=2, value=warning_row["Details"])
+                for col_index in range(1, 3):
+                    cell = worksheet.cell(row=row_index, column=col_index)
+                    cell.border = table_border
+                    cell.alignment = left_alignment
+                row_index += 1
+
         row_index += 1
         row_index = write_section_header(row_index, "Results")
         row_index = write_table_header(row_index, ["Property", "Value", "Unit", "Notes"])
@@ -1055,19 +1387,6 @@ class MainWindow(QMainWindow):
                 value_cell.alignment = right_alignment
                 value_cell.number_format = get_excel_number_format(result_row["Unit"])
 
-            row_index += 1
-
-        missing_lhv = self.last_result_data.get("missing_lhv") or []
-        if missing_lhv:
-            row_index += 1
-            row_index = write_section_header(row_index, "Warnings")
-            row_index = write_table_header(row_index, ["Warning Type", "Details"])
-            worksheet.cell(row=row_index, column=1, value="Missing LHV data")
-            worksheet.cell(row=row_index, column=2, value=", ".join(missing_lhv))
-            for col_index in range(1, 3):
-                cell = worksheet.cell(row=row_index, column=col_index)
-                cell.border = table_border
-                cell.alignment = left_alignment
             row_index += 1
 
         worksheet.column_dimensions["A"].width = 32
@@ -1593,9 +1912,11 @@ class MainWindow(QMainWindow):
         self.density_actual_kg_m3 = result_data.get("density_actual_kg_m3")
         self.density_normal_kg_m3 = result_data.get("density_normal_kg_m3")
         self.density_standard_kg_m3 = result_data.get("density_standard_kg_m3")
+        self.set_thermo_warning_messages(result_data.get("warnings") or [])
         self.update_flow_conversion()
         self.ui.results_list.clear()
         self.ui.results_list.addItem(f"Calculating for {result_data['basis']} basis...")
+        self.ui.results_list.addItem(f"Model / EOS: {result_data.get('model_display', self.calculator.eos)}")
         self.ui.results_list.addItem(f"Avg. Molecular Wt: {result_data['mw']:.2f} g/mol")
         # Density/Phase
         density_result = result_data['density_result']
@@ -1619,11 +1940,8 @@ class MainWindow(QMainWindow):
                     self.ui.results_list.addItem("  Density @ selected conditions (Vap): N.A.")
             else:
                 self.ui.results_list.addItem(f"Phase @ selected conditions: {phase} (Result format unexpected)")
-        elif phase == "Liquid" and density_result is not None:
-            self.ui.results_list.addItem(f"Phase @ selected conditions: {phase}")
-            self.ui.results_list.addItem(f"Density @ selected conditions: {density_result:.3f} kg/m³")
-        elif phase == "Vapor" and density_result is not None:
-            self.ui.results_list.addItem(f"Phase @ selected conditions: {phase}")
+        elif density_result is not None:
+            self.ui.results_list.addItem(f"Phase @ selected conditions: {phase or 'Could not determine.'}")
             self.ui.results_list.addItem(f"Density @ selected conditions: {density_result:.3f} kg/m³")
         elif phase:
             self.ui.results_list.addItem(f"Phase @ selected conditions: {phase}")

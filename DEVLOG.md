@@ -1,6 +1,11 @@
 ## DEVLOG
 
 ### 2026-03-20
+- Added an automatic pure-water model override so effectively pure water now uses `IAPWS-95` instead of the default `PRMIX` route.
+- Suppressed the warning banner for pure water because it no longer uses `PRMIX`, while preserving the existing warning behavior for water-containing mixtures.
+- Updated the displayed/exported model field to reflect the actual calculation route and preserved the shared selected/normal/standard density state used by the Flow tab.
+- Added a persistent, non-modal warning banner above the main Results area for water-containing `PRMIX` calculations.
+- Added specific thermo warnings for water-containing mixtures and water-containing two-phase behavior, and carried the same warning text into the Excel report `Warnings` section.
 - Expanded the first thermo tab from one density output to three: selected-condition density, normal density, and standard density.
 - Added normal reference density at `0 °C` and `1 atm` for future `Nm3`-basis work.
 - Added standard reference density at `60 °F` and `1 atm` for future `Sm3` / liquid-hydrocarbon standard-volume work.
