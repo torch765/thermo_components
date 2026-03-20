@@ -33,6 +33,9 @@ LHV_DATA_RAW = {
     "nonane": 263.0, # Represents n-nonane typically
     "oxygen": 0.0,
     "nitrogen": 0.0,
+    # Inerts / non-fuels (set to 0.0 to avoid “missing LHV” warnings)
+    "argon": 0.0,
+    "water": 0.0,
     # Ensure any other components in MOLECULAR_WEIGHTS are added if needed
     # Add the dummy entry if you want it stored, though it's not needed for calculation
     # "        ": 0.0

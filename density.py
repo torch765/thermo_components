@@ -1,6 +1,7 @@
 import sys
 import sqlite3
 import os # To check if DB file exists
+from datetime import datetime
 
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QComboBox, QListWidget,
@@ -33,10 +34,51 @@ MOLECULAR_WEIGHTS = {
     "toluene": 92.14, "o-xylene": 106.17, "m-xylene": 106.17,
     "p-xylene": 106.17, "ethylbenzene": 106.17, "cumene": 120.19,
     "octane": 114.23, "nonane": 128.26, "oxygen": 32.00,
-    "nitrogen": 28.01,
+    "nitrogen": 28.01, "argon": 39.95, "water": 18.015,
 }
 
 R = 0.082057  # L·atm/(mol·K)
+KCAL_PER_MJ = 238.845896627
+MJ_PER_MMBTU = 1055.05585262
+NORMAL_MOLAR_VOLUME_NM3_PER_KMOL = 22.414
+NORMAL_T_C = 0.0
+NORMAL_P_ATM = 1.0
+STANDARD_T_F = 60.0
+STANDARD_T_C = (STANDARD_T_F - 32.0) * 5.0 / 9.0
+STANDARD_P_ATM = 1.0
+ATM_TO_PA = 101325.0
+KG_PER_TONNE = 1000.0
+KG_PER_LB = 0.45359237
+LB_PER_KLB = 1000.0
+HOURS_PER_DAY = 24.0
+M3_PER_BBL = 0.158987294928
+FT3_PER_M3 = 35.3146667
+M3_PER_FT3 = 0.028316846592
+
+FLOW_UNIT_ORDER = [
+    "kg/h", "kg/d", "t/h", "t/d", "lb/h", "lb/d", "Klb/h", "Klb/d",
+    "Nm3/h", "Nm3/d", "Sm3/h", "Sm3/d", "bbl/h", "bbl/d", "SCFH", "MSCFD", "MMSCFD",
+]
+
+FLOW_UNIT_DEFINITIONS = {
+    "kg/h": {"dimension": "mass", "basis": "none", "amount_to_base": 1.0, "time_to_day": HOURS_PER_DAY},
+    "kg/d": {"dimension": "mass", "basis": "none", "amount_to_base": 1.0, "time_to_day": 1.0},
+    "t/h": {"dimension": "mass", "basis": "none", "amount_to_base": KG_PER_TONNE, "time_to_day": HOURS_PER_DAY},
+    "t/d": {"dimension": "mass", "basis": "none", "amount_to_base": KG_PER_TONNE, "time_to_day": 1.0},
+    "lb/h": {"dimension": "mass", "basis": "none", "amount_to_base": KG_PER_LB, "time_to_day": HOURS_PER_DAY},
+    "lb/d": {"dimension": "mass", "basis": "none", "amount_to_base": KG_PER_LB, "time_to_day": 1.0},
+    "Klb/h": {"dimension": "mass", "basis": "none", "amount_to_base": KG_PER_LB * LB_PER_KLB, "time_to_day": HOURS_PER_DAY},
+    "Klb/d": {"dimension": "mass", "basis": "none", "amount_to_base": KG_PER_LB * LB_PER_KLB, "time_to_day": 1.0},
+    "Nm3/h": {"dimension": "ref_volume", "basis": "normal", "amount_to_base": 1.0, "time_to_day": HOURS_PER_DAY},
+    "Nm3/d": {"dimension": "ref_volume", "basis": "normal", "amount_to_base": 1.0, "time_to_day": 1.0},
+    "Sm3/h": {"dimension": "ref_volume", "basis": "standard", "amount_to_base": 1.0, "time_to_day": HOURS_PER_DAY},
+    "Sm3/d": {"dimension": "ref_volume", "basis": "standard", "amount_to_base": 1.0, "time_to_day": 1.0},
+    "bbl/h": {"dimension": "ref_volume", "basis": "standard", "amount_to_base": M3_PER_BBL, "time_to_day": HOURS_PER_DAY},
+    "bbl/d": {"dimension": "ref_volume", "basis": "standard", "amount_to_base": M3_PER_BBL, "time_to_day": 1.0},
+    "SCFH": {"dimension": "ref_volume", "basis": "standard", "amount_to_base": M3_PER_FT3, "time_to_day": HOURS_PER_DAY},
+    "MSCFD": {"dimension": "ref_volume", "basis": "standard", "amount_to_base": 1000.0 * M3_PER_FT3, "time_to_day": 1.0},
+    "MMSCFD": {"dimension": "ref_volume", "basis": "standard", "amount_to_base": 1_000_000.0 * M3_PER_FT3, "time_to_day": 1.0},
+}
 
 def load_lhv_data(db_path='lhv_data.db'):
     """Loads LHV data from the SQLite database and returns it."""
@@ -67,6 +109,202 @@ def resource_path(relative_path):
     if hasattr(sys, '_MEIPASS'):
         return os.path.join(sys._MEIPASS, relative_path)
     return os.path.join(os.path.abspath("."), relative_path)
+
+
+def build_lhv_display_values(lhv_mj_nm3: float, mw_g_mol: float) -> dict:
+    """Build display-ready LHV values from the base mixture MJ/Nm³ result."""
+    try:
+        lhv_mj_nm3 = float(lhv_mj_nm3)
+    except (TypeError, ValueError):
+        lhv_mj_nm3 = 0.0
+
+    try:
+        mw_g_mol = float(mw_g_mol)
+    except (TypeError, ValueError):
+        mw_g_mol = 0.0
+
+    kcal_per_nm3 = lhv_mj_nm3 * KCAL_PER_MJ
+
+    values = {
+        "volumetric": {
+            "MJ/Nm³": lhv_mj_nm3,
+            "kcal/Nm³": kcal_per_nm3,
+            "MMkcal/Nm³": kcal_per_nm3 / 1_000_000.0,
+            "GJ/Nm³": lhv_mj_nm3 / 1000.0,
+            "MMBtu/Nm³": lhv_mj_nm3 / MJ_PER_MMBTU,
+        },
+        "mass_basis": {
+            "MJ/kg": None,
+            "MJ/t": None,
+            "GJ/kg": None,
+            "GJ/t": None,
+            "kcal/kg": None,
+            "kcal/t": None,
+            "MMkcal/kg": None,
+            "MMkcal/t": None,
+            "MMBtu/kg": None,
+            "MMBtu/t": None,
+        },
+    }
+
+    if mw_g_mol > 0:
+        kg_per_nm3 = mw_g_mol / NORMAL_MOLAR_VOLUME_NM3_PER_KMOL
+        if kg_per_nm3 > 0:
+            mj_per_kg = lhv_mj_nm3 / kg_per_nm3
+            mj_per_t = mj_per_kg * 1000.0
+            kcal_per_kg = mj_per_kg * KCAL_PER_MJ
+            kcal_per_t = kcal_per_kg * 1000.0
+            values["mass_basis"] = {
+                "MJ/kg": mj_per_kg,
+                "MJ/t": mj_per_t,
+                "GJ/kg": mj_per_kg / 1000.0,
+                "GJ/t": mj_per_t / 1000.0,
+                "kcal/kg": kcal_per_kg,
+                "kcal/t": kcal_per_t,
+                "MMkcal/kg": kcal_per_kg / 1_000_000.0,
+                "MMkcal/t": kcal_per_t / 1_000_000.0,
+                "MMBtu/kg": mj_per_kg / MJ_PER_MMBTU,
+                "MMBtu/t": mj_per_t / MJ_PER_MMBTU,
+            }
+
+    # TODO: Add MW output once a flow input (for example Nm³/h or t/h) is introduced.
+    return values
+
+
+def format_lhv_display_value(value: float | None) -> str:
+    """Format LHV values with readable precision for the results pane."""
+    if value is None:
+        return "N/A"
+    decimals = 2 if abs(value) >= 1 else 4
+    return f"{value:.{decimals}f}"
+
+
+def get_excel_number_format(unit: str) -> str:
+    """Return a sensible Excel number format for the given engineering unit."""
+    if unit in {"Mol %", "Wt %"}:
+        return "0.0000"
+    if unit == "kg/m³":
+        return "0.000"
+    if unit in {"GJ/Nm³", "MMBtu/Nm³", "MMkcal/Nm³", "GJ/kg", "MMBtu/kg", "MMkcal/kg"}:
+        return "0.0000"
+    if unit:
+        return "0.00"
+    return "General"
+
+
+def celsius_to_kelvin(temperature_c: float) -> float:
+    return temperature_c + 273.15
+
+
+def atm_to_pa(pressure_atm: float) -> float:
+    return pressure_atm * ATM_TO_PA
+
+
+def extract_scalar_density_value(density_result, phase, error) -> float | None:
+    """Return a single density value only when the flash result is scalar."""
+    if error or density_result is None:
+        return None
+    if phase == "Two-Phase" or isinstance(density_result, tuple):
+        return None
+    try:
+        return float(density_result)
+    except (TypeError, ValueError):
+        return None
+
+
+def build_density_note(phase, error) -> str:
+    """Build a short note for density rows in the export report."""
+    if error:
+        return error
+    if phase == "Two-Phase":
+        return "Two-Phase result"
+    if phase:
+        return f"Phase: {phase}"
+    return ""
+
+
+def parse_flow_input(text: str) -> float | None:
+    """Parse a flow input, tolerating spaces and thousands separators."""
+    cleaned = str(text).strip().replace(",", "").replace(" ", "")
+    if not cleaned:
+        return None
+    return float(cleaned)
+
+
+def format_flow_value(value: float) -> str:
+    """Format flow results without scientific notation for typical engineering values."""
+    formatted = f"{value:,.6f}"
+    if "." in formatted:
+        formatted = formatted.rstrip("0").rstrip(".")
+    return formatted
+
+
+def _coerce_positive_density(value) -> float | None:
+    try:
+        density = float(value)
+    except (TypeError, ValueError):
+        return None
+    if density <= 0:
+        return None
+    return density
+
+
+def _required_density_bases(from_meta: dict, to_meta: dict) -> set[str]:
+    if from_meta["dimension"] == "mass" and to_meta["dimension"] == "mass":
+        return set()
+    if from_meta["dimension"] == "mass":
+        return {to_meta["basis"]}
+    if to_meta["dimension"] == "mass":
+        return {from_meta["basis"]}
+    if from_meta["basis"] == to_meta["basis"]:
+        return set()
+    return {from_meta["basis"], to_meta["basis"]}
+
+
+def _missing_density_message(missing_bases: set[str]) -> str:
+    if missing_bases == {"normal"}:
+        return "Normal density required"
+    if missing_bases == {"standard"}:
+        return "Standard density required"
+    return "Normal and standard densities required"
+
+
+def convert_flow(value, from_unit, to_unit, density_normal_kg_m3=None, density_standard_kg_m3=None):
+    """Convert between mass and reference-volume flow units using density bridges."""
+    from_meta = FLOW_UNIT_DEFINITIONS.get(from_unit)
+    to_meta = FLOW_UNIT_DEFINITIONS.get(to_unit)
+    if from_meta is None or to_meta is None:
+        raise ValueError("Select source and destination units")
+
+    value = float(value)
+    required_bases = _required_density_bases(from_meta, to_meta)
+    density_map = {
+        "normal": _coerce_positive_density(density_normal_kg_m3),
+        "standard": _coerce_positive_density(density_standard_kg_m3),
+    }
+    missing_bases = {basis for basis in required_bases if density_map.get(basis) is None}
+    if missing_bases:
+        raise ValueError(_missing_density_message(missing_bases))
+
+    from_base_per_day = value * from_meta["amount_to_base"] * from_meta["time_to_day"]
+
+    if from_meta["dimension"] == "mass":
+        mass_kg_day = from_base_per_day
+        if to_meta["dimension"] == "mass":
+            return mass_kg_day / (to_meta["amount_to_base"] * to_meta["time_to_day"])
+        target_volume_m3_day = mass_kg_day / density_map[to_meta["basis"]]
+        return target_volume_m3_day / (to_meta["amount_to_base"] * to_meta["time_to_day"])
+
+    source_volume_m3_day = from_base_per_day
+    if to_meta["dimension"] == "ref_volume" and from_meta["basis"] == to_meta["basis"]:
+        return source_volume_m3_day / (to_meta["amount_to_base"] * to_meta["time_to_day"])
+
+    mass_kg_day = source_volume_m3_day * density_map[from_meta["basis"]]
+    if to_meta["dimension"] == "mass":
+        return mass_kg_day / (to_meta["amount_to_base"] * to_meta["time_to_day"])
+
+    target_volume_m3_day = mass_kg_day / density_map[to_meta["basis"]]
+    return target_volume_m3_day / (to_meta["amount_to_base"] * to_meta["time_to_day"])
 
 # Step 1: Worker class for threaded calculation
 class CalculationWorker(QObject):
@@ -126,6 +364,14 @@ class CalculationWorker(QObject):
             # --- Perform Calculations ---
             mw = self.calculator.calculate_molecular_weight()
             density_result, phase, error = self.calculator.calculate_density(self.T_k, self.pressure_pa)
+            density_normal_result, density_normal_phase, density_normal_error = self.calculator.calculate_density(
+                celsius_to_kelvin(NORMAL_T_C),
+                atm_to_pa(NORMAL_P_ATM),
+            )
+            density_standard_result, density_standard_phase, density_standard_error = self.calculator.calculate_density(
+                celsius_to_kelvin(STANDARD_T_C),
+                atm_to_pa(STANDARD_P_ATM),
+            )
             bubble_point, bp_error = self.calculator.calculate_bubble_point(self.pressure_pa)
             mixture_lhv, missing_lhv = self.calculator.calculate_lhv(self.lhv_data)
 
@@ -134,6 +380,19 @@ class CalculationWorker(QObject):
                 'density_result': density_result,
                 'phase': phase,
                 'density_error': error,
+                'density_actual_kg_m3': extract_scalar_density_value(density_result, phase, error),
+                'density_normal_result': density_normal_result,
+                'density_normal_phase': density_normal_phase,
+                'density_normal_error': density_normal_error,
+                'density_normal_kg_m3': extract_scalar_density_value(
+                    density_normal_result, density_normal_phase, density_normal_error
+                ),
+                'density_standard_result': density_standard_result,
+                'density_standard_phase': density_standard_phase,
+                'density_standard_error': density_standard_error,
+                'density_standard_kg_m3': extract_scalar_density_value(
+                    density_standard_result, density_standard_phase, density_standard_error
+                ),
                 'bubble_point': bubble_point,
                 'bp_error': bp_error,
                 'mixture_lhv': mixture_lhv,
@@ -395,6 +654,10 @@ class MainWindow(QMainWindow):
         self.lhv_database = lhv_data
         self.lhv_data_loaded = bool(self.lhv_database)
         self.calculator = MixtureCalculator()
+        self.last_result_data = None
+        self.density_actual_kg_m3 = None
+        self.density_normal_kg_m3 = None
+        self.density_standard_kg_m3 = None
 
         if not self.lhv_data_loaded:
              print("Warning: MainWindow initialized with no LHV data.")
@@ -403,6 +666,7 @@ class MainWindow(QMainWindow):
         # --- Populate widgets ---
         self.populate_comboboxes()
         self.setup_table()
+        self.setup_flow_tab()
 
         # --- Connect signals ---
         self.connect_signals()
@@ -411,8 +675,478 @@ class MainWindow(QMainWindow):
         self.ui.radioButton_mol_percent.setChecked(True) # Default Mol%
         self.on_input_basis_changed() # Set initial table state
 
+        # "Export Report" would be more accurate, but keep "Print Results" as requested.
+        if hasattr(self.ui, "printResultsButton"):
+            self.ui.printResultsButton.setEnabled(True)
+
         # Set Window Title (Optional - can also be set in Designer)
         self.setWindowTitle("Thermo Calculator - prototype v.0.1")
+
+    def _parse_float_or_zero(self, text: str) -> float:
+        """Parse float from a table cell; treat blanks/invalid as 0.0."""
+        try:
+            return float(text) if text and str(text).strip() else 0.0
+        except (TypeError, ValueError):
+            return 0.0
+
+    def _recalculate_inactive_column(self):
+        """Auto-calculate the inactive composition column from the active one.
+
+        - If Mol% is active, compute Wt% (inactive).
+        - If Wt% is active, compute Mol% (inactive).
+        The inactive column remains read-only and gray.
+        """
+        row_count = self.ui.tableWidget.rowCount()
+        if row_count <= 1:
+            return
+
+        is_mol_basis = self.ui.radioButton_mol_percent.isChecked()
+        active_col = 1 if is_mol_basis else 2
+        inactive_col = 2 if is_mol_basis else 1
+        total_row = row_count - 1
+
+        names = []
+        active_vals = []
+        mws = []
+
+        for row in range(total_row):
+            name_item = self.ui.tableWidget.item(row, 0)
+            if not name_item:
+                continue
+            name = name_item.text()
+            names.append(name)
+
+            active_item = self.ui.tableWidget.item(row, active_col)
+            active_vals.append(self._parse_float_or_zero(active_item.text() if active_item else ""))
+
+            mw = MOLECULAR_WEIGHTS.get(name, 0.0)
+            mws.append(mw if mw is not None else 0.0)
+
+        derived = [None] * len(names)
+        if is_mol_basis:
+            # Mol% -> Wt%
+            masses = []
+            total_mass = 0.0
+            for mol, mw in zip(active_vals, mws):
+                m = (mol * mw) if (mw and mw > 0 and mol != 0) else 0.0
+                masses.append(m)
+                total_mass += m
+            if total_mass > 0:
+                derived = [(100.0 * m / total_mass) for m in masses]
+        else:
+            # Wt% -> Mol%
+            moles = []
+            total_moles = 0.0
+            for wt, mw in zip(active_vals, mws):
+                n = (wt / mw) if (mw and mw > 0 and wt != 0) else 0.0
+                moles.append(n)
+                total_moles += n
+            if total_moles > 0:
+                derived = [(100.0 * n / total_moles) for n in moles]
+
+        # Write derived values into inactive column (avoid recursion)
+        self.ui.tableWidget.blockSignals(True)
+        try:
+            name_idx = 0
+            for row in range(total_row):
+                name_item = self.ui.tableWidget.item(row, 0)
+                if not name_item:
+                    continue
+
+                inactive_item = self.ui.tableWidget.item(row, inactive_col)
+                if inactive_item is None:
+                    inactive_item = QTableWidgetItem("")
+                    self.ui.tableWidget.setItem(row, inactive_col, inactive_item)
+
+                val = derived[name_idx]
+                inactive_item.setText("" if val is None else f"{val:.4f}")
+
+                # Keep inactive styling/flags consistent
+                inactive_item.setBackground(QColor("lightGray"))
+                inactive_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+
+                name_idx += 1
+
+            # Keep inactive total cell blank
+            total_inactive_item = self.ui.tableWidget.item(total_row, inactive_col)
+            if total_inactive_item is not None:
+                total_inactive_item.setText("")
+                total_inactive_item.setBackground(QColor("lightGray"))
+                total_inactive_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+        finally:
+            self.ui.tableWidget.blockSignals(False)
+
+    def invalidate_results(self, clear_visible_results: bool = True):
+        """Clear the latest successful result so exports cannot use stale data."""
+        self.last_result_data = None
+        self.density_actual_kg_m3 = None
+        self.density_normal_kg_m3 = None
+        self.density_standard_kg_m3 = None
+        if clear_visible_results:
+            self.ui.results_list.clear()
+        self.update_flow_conversion()
+
+    def get_export_base_dir(self):
+        """Return the directory where generated reports should be saved."""
+        if getattr(sys, "frozen", False):
+            return os.path.dirname(sys.executable)
+        return os.path.dirname(os.path.abspath(__file__))
+
+    def build_report_filename(self, timestamp: datetime | None = None):
+        """Build the timestamped Excel report filename."""
+        timestamp = timestamp or datetime.now()
+        return f"Thermo_Report_{timestamp.strftime('%Y%m%d_%H%M%S')}.xlsx"
+
+    def get_current_conditions(self):
+        """Return the currently active calculation conditions for reporting."""
+        basis = self.last_result_data.get("basis") if self.last_result_data else (
+            "Mol %" if self.ui.radioButton_mol_percent.isChecked() else "Wt %"
+        )
+        return [
+            ("Basis", basis),
+            ("Temperature", self.ui.comboBox_select_temperature.currentText()),
+            ("Pressure", self.ui.comboBox_select_pressure.currentText()),
+            ("EOS", self.ui.comboBox_select_EOS.currentText()),
+        ]
+
+    def _coerce_report_value(self, text: str):
+        """Convert report cell text to float when possible, preserving blanks/text."""
+        cleaned = str(text).strip() if text is not None else ""
+        if not cleaned:
+            return ""
+        try:
+            return float(cleaned)
+        except ValueError:
+            return cleaned
+
+    def get_input_composition_rows(self):
+        """Return the input composition table rows, including the Total row."""
+        rows = []
+        for row_index in range(self.ui.tableWidget.rowCount()):
+            component_item = self.ui.tableWidget.item(row_index, 0)
+            mol_item = self.ui.tableWidget.item(row_index, 1)
+            wt_item = self.ui.tableWidget.item(row_index, 2)
+            rows.append({
+                "Component": component_item.text() if component_item else "",
+                "Mol %": self._coerce_report_value(mol_item.text() if mol_item else ""),
+                "Wt %": self._coerce_report_value(wt_item.text() if wt_item else ""),
+            })
+        return rows
+
+    def build_results_rows(self, result_data):
+        """Build structured result rows for report export without scraping the UI."""
+        rows = []
+
+        def add_row(property_name, value, unit="", notes=""):
+            rows.append({
+                "Property": property_name,
+                "Value": value,
+                "Unit": unit,
+                "Notes": notes,
+            })
+
+        add_row("Average molecular weight", result_data.get("mw"), "g/mol")
+
+        phase = result_data.get("phase")
+        density_result = result_data.get("density_result")
+        density_error = result_data.get("density_error")
+        if phase:
+            add_row("Phase @ selected conditions", phase)
+        else:
+            add_row("Phase @ selected conditions", "Could not determine", notes=density_error or "")
+
+        if density_error:
+            add_row("Density @ selected conditions", "N.A.", "kg/m³", density_error)
+        elif phase == "Two-Phase" and isinstance(density_result, tuple) and len(density_result) == 2:
+            density_liq, density_gas = density_result
+            add_row(
+                "Density @ selected conditions (Liq)",
+                density_liq if density_liq is not None else "N.A.",
+                "kg/m³",
+            )
+            add_row(
+                "Density @ selected conditions (Vap)",
+                density_gas if density_gas is not None else "N.A.",
+                "kg/m³",
+            )
+        elif density_result is not None:
+            add_row("Density @ selected conditions", density_result, "kg/m³")
+        else:
+            add_row("Density @ selected conditions", "N.A.", "kg/m³")
+
+        def add_reference_density_row(property_name, density_value, phase_value, error_value):
+            add_row(
+                property_name,
+                density_value if density_value is not None else "N.A.",
+                "kg/m³",
+                build_density_note(phase_value, error_value),
+            )
+
+        add_reference_density_row(
+            "Density @ normal conditions",
+            result_data.get("density_normal_kg_m3"),
+            result_data.get("density_normal_phase"),
+            result_data.get("density_normal_error"),
+        )
+        add_reference_density_row(
+            "Density @ standard conditions",
+            result_data.get("density_standard_kg_m3"),
+            result_data.get("density_standard_phase"),
+            result_data.get("density_standard_error"),
+        )
+
+        pressure_atm = result_data.get("pressure_atm")
+        bubble_point_label = f"Bubble point @ {pressure_atm:g} atm" if pressure_atm is not None else "Bubble point"
+        bubble_point = result_data.get("bubble_point")
+        bp_error = result_data.get("bp_error")
+        if bp_error:
+            add_row(bubble_point_label, "N/A", "°C", bp_error)
+        elif bubble_point is not None:
+            add_row(bubble_point_label, bubble_point, "°C")
+        else:
+            add_row(bubble_point_label, "Calculation Failed", "°C")
+
+        if self.lhv_data_loaded:
+            lhv_display_values = build_lhv_display_values(result_data.get("mixture_lhv", 0.0), result_data.get("mw", 0.0))
+            add_row("Mixture LHV", lhv_display_values["volumetric"]["MJ/Nm³"], "MJ/Nm³", "Base value")
+            for unit in ["kcal/Nm³", "MMkcal/Nm³", "GJ/Nm³", "MMBtu/Nm³"]:
+                add_row("Mixture LHV", lhv_display_values["volumetric"][unit], unit)
+
+            mass_note = "Derived from mixture MW and 22.414 Nm³/kmol at 0 °C and 1 atm."
+            for index, unit in enumerate([
+                "MJ/kg", "MJ/t", "GJ/kg", "GJ/t", "kcal/kg", "kcal/t",
+                "MMkcal/kg", "MMkcal/t", "MMBtu/kg", "MMBtu/t"
+            ]):
+                add_row(
+                    "Mixture LHV (Mass basis)",
+                    lhv_display_values["mass_basis"][unit],
+                    unit,
+                    mass_note if index == 0 else "",
+                )
+
+            missing_lhv = result_data.get("missing_lhv") or []
+            if missing_lhv:
+                add_row("LHV Warning", ", ".join(missing_lhv), "", "No LHV data for selected components.")
+        else:
+            add_row("LHV data", "N/A", "", "LHV database not loaded.")
+
+        return rows
+
+    def export_results_to_excel(self):
+        """Export the latest calculation results to a formatted Excel workbook."""
+        if not self.last_result_data:
+            QMessageBox.information(self, "Print Results", "No calculation results available. Please click Go first.")
+            return None
+
+        try:
+            from openpyxl import Workbook
+            from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+        except ImportError:
+            QMessageBox.warning(
+                self,
+                "Print Results",
+                "Excel export requires the 'openpyxl' package.\n"
+                "Install it in this environment and try again.\n\n"
+                "Command:\npython -m pip install openpyxl",
+            )
+            return None
+
+        timestamp = datetime.now()
+        report_path = os.path.join(self.get_export_base_dir(), self.build_report_filename(timestamp))
+        workbook = Workbook()
+        worksheet = workbook.active
+        worksheet.title = "Results"
+        worksheet.freeze_panes = "A5"
+
+        thin_side = Side(style="thin", color="B7C9E2")
+        table_border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
+        title_font = Font(size=16, bold=True)
+        subtitle_font = Font(italic=True, color="666666")
+        section_font = Font(size=11, bold=True)
+        header_font = Font(bold=True, color="FFFFFF")
+        section_fill = PatternFill("solid", fgColor="D9EAF7")
+        header_fill = PatternFill("solid", fgColor="5B9BD5")
+        left_alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
+        right_alignment = Alignment(horizontal="right", vertical="center")
+        center_alignment = Alignment(horizontal="center", vertical="center")
+
+        worksheet.merge_cells("A1:D1")
+        worksheet["A1"] = "THERMO CALCULATOR REPORT"
+        worksheet["A1"].font = title_font
+        worksheet["A1"].alignment = center_alignment
+        worksheet.row_dimensions[1].height = 24
+
+        worksheet.merge_cells("A2:D2")
+        worksheet["A2"] = f"Exported: {timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
+        worksheet["A2"].font = subtitle_font
+        worksheet["A2"].alignment = center_alignment
+
+        def style_row(row_index, max_col=4, fill=None, font=None):
+            for col_index in range(1, max_col + 1):
+                cell = worksheet.cell(row=row_index, column=col_index)
+                cell.border = table_border
+                cell.alignment = left_alignment
+                if fill is not None:
+                    cell.fill = fill
+                if font is not None:
+                    cell.font = font
+
+        def write_section_header(row_index, title):
+            worksheet.cell(row=row_index, column=1, value=title)
+            style_row(row_index, fill=section_fill, font=section_font)
+            return row_index + 1
+
+        def write_table_header(row_index, headers):
+            for col_index, header in enumerate(headers, start=1):
+                cell = worksheet.cell(row=row_index, column=col_index, value=header)
+                cell.font = header_font
+                cell.fill = header_fill
+                cell.border = table_border
+                cell.alignment = left_alignment
+            return row_index + 1
+
+        row_index = 4
+        row_index = write_section_header(row_index, "Conditions")
+        row_index = write_table_header(row_index, ["Setting", "Value"])
+        for setting, value in self.get_current_conditions():
+            worksheet.cell(row=row_index, column=1, value=setting)
+            value_cell = worksheet.cell(row=row_index, column=2, value=value)
+            for col_index in range(1, 3):
+                cell = worksheet.cell(row=row_index, column=col_index)
+                cell.border = table_border
+                cell.alignment = left_alignment
+            value_cell.alignment = left_alignment
+            row_index += 1
+
+        row_index += 1
+        row_index = write_section_header(row_index, "Input Composition")
+        row_index = write_table_header(row_index, ["Component", "Mol %", "Wt %"])
+        for composition_row in self.get_input_composition_rows():
+            worksheet.cell(row=row_index, column=1, value=composition_row["Component"])
+            for column_index, key in enumerate(["Mol %", "Wt %"], start=2):
+                value = composition_row[key]
+                cell = worksheet.cell(row=row_index, column=column_index, value=value if value != "" else None)
+                cell.border = table_border
+                if isinstance(value, (int, float)):
+                    cell.alignment = right_alignment
+                    cell.number_format = get_excel_number_format(key)
+                else:
+                    cell.alignment = left_alignment
+            worksheet.cell(row=row_index, column=1).border = table_border
+            worksheet.cell(row=row_index, column=1).alignment = left_alignment
+            row_index += 1
+
+        row_index += 1
+        row_index = write_section_header(row_index, "Results")
+        row_index = write_table_header(row_index, ["Property", "Value", "Unit", "Notes"])
+        for result_row in self.build_results_rows(self.last_result_data):
+            worksheet.cell(row=row_index, column=1, value=result_row["Property"])
+            value = result_row["Value"]
+            value_cell = worksheet.cell(row=row_index, column=2, value=value if value != "" else None)
+            worksheet.cell(row=row_index, column=3, value=result_row["Unit"])
+            worksheet.cell(row=row_index, column=4, value=result_row["Notes"])
+
+            for col_index in range(1, 5):
+                cell = worksheet.cell(row=row_index, column=col_index)
+                cell.border = table_border
+                cell.alignment = left_alignment
+
+            if isinstance(value, (int, float)):
+                value_cell.alignment = right_alignment
+                value_cell.number_format = get_excel_number_format(result_row["Unit"])
+
+            row_index += 1
+
+        missing_lhv = self.last_result_data.get("missing_lhv") or []
+        if missing_lhv:
+            row_index += 1
+            row_index = write_section_header(row_index, "Warnings")
+            row_index = write_table_header(row_index, ["Warning Type", "Details"])
+            worksheet.cell(row=row_index, column=1, value="Missing LHV data")
+            worksheet.cell(row=row_index, column=2, value=", ".join(missing_lhv))
+            for col_index in range(1, 3):
+                cell = worksheet.cell(row=row_index, column=col_index)
+                cell.border = table_border
+                cell.alignment = left_alignment
+            row_index += 1
+
+        worksheet.column_dimensions["A"].width = 32
+        worksheet.column_dimensions["B"].width = 22
+        worksheet.column_dimensions["C"].width = 18
+        worksheet.column_dimensions["D"].width = 52
+
+        try:
+            workbook.save(report_path)
+        except Exception as exc:
+            QMessageBox.critical(self, "Print Results", f"Failed to save Excel report:\n{exc}")
+            return None
+
+        QMessageBox.information(self, "Print Results", f"Excel report saved to:\n{report_path}")
+
+        if hasattr(os, "startfile"):
+            try:
+                os.startfile(report_path)
+            except OSError:
+                pass
+
+        return report_path
+
+    def setup_flow_tab(self):
+        """Initialize the Flow tab controls from the current UI definition."""
+        if not hasattr(self.ui, "comboBox_select_units"):
+            return
+
+        self.ui.comboBox_select_units.clear()
+        self.ui.comboBox_select_units.addItems(FLOW_UNIT_ORDER)
+        self.ui.comboBox_select_desired_units.clear()
+        self.ui.comboBox_select_desired_units.addItems(FLOW_UNIT_ORDER)
+        self.ui.comboBox_select_units.setCurrentText("kg/h")
+        self.ui.comboBox_select_desired_units.setCurrentText("t/d")
+        self.ui.lineEdit_result.setReadOnly(True)
+        self.ui.lineEdit_in_desired_units.setReadOnly(True)
+        self.update_flow_conversion()
+
+    def update_flow_conversion(self):
+        """Recalculate the Flow-tab conversion using the latest density state."""
+        if not hasattr(self.ui, "lineEdit_enter_flow"):
+            return
+
+        from_unit = self.ui.comboBox_select_units.currentText().strip()
+        to_unit = self.ui.comboBox_select_desired_units.currentText().strip()
+        self.ui.lineEdit_in_desired_units.setText(to_unit)
+
+        if not from_unit or not to_unit:
+            self.ui.lineEdit_result.clear()
+            return
+
+        input_text = self.ui.lineEdit_enter_flow.text()
+        if not input_text.strip():
+            self.ui.lineEdit_result.clear()
+            return
+
+        try:
+            value = parse_flow_input(input_text)
+        except ValueError:
+            self.ui.lineEdit_result.setText("Invalid input")
+            return
+
+        if value is None:
+            self.ui.lineEdit_result.clear()
+            return
+
+        try:
+            converted_value = convert_flow(
+                value,
+                from_unit,
+                to_unit,
+                density_normal_kg_m3=self.density_normal_kg_m3,
+                density_standard_kg_m3=self.density_standard_kg_m3,
+            )
+        except ValueError as exc:
+            self.ui.lineEdit_result.setText(str(exc))
+            return
+
+        self.ui.lineEdit_result.setText(format_flow_value(converted_value))
 
     def populate_comboboxes(self):
         """Populate the ComboBox widgets with options."""
@@ -420,8 +1154,14 @@ class MainWindow(QMainWindow):
         self.ui.comboBox_select_components.addItems(list(MOLECULAR_WEIGHTS.keys()))
 
         # Temperature ComboBox
-        self.ui.comboBox_select_temperature.addItems(["0 °C", "5 °C", "10 °C", "15 °C", "25 °C", "50 °C", "100 °C", "150 °C", "200 °C"])
-        self.ui.comboBox_select_temperature.setCurrentText("15 °C") # Default
+        cryo_temps = [f"{t} °C" for t in range(-250, 1, 10)]  # -250..0 step 10
+        existing_temps = ["0 °C", "5 °C", "10 °C", "15 °C", "25 °C", "50 °C", "100 °C", "150 °C", "200 °C"]
+        temps = []
+        for t in cryo_temps + existing_temps:
+            if t not in temps:
+                temps.append(t)
+        self.ui.comboBox_select_temperature.addItems(temps)
+        self.ui.comboBox_select_temperature.setCurrentText("0 °C") # Default
 
         # Pressure ComboBox
         self.ui.comboBox_select_pressure.addItems(["1 atm", "5 atm", "10 atm", "20 atm", "50 atm", "100 atm"])
@@ -476,6 +1216,12 @@ class MainWindow(QMainWindow):
         self.ui.delete_all_button.clicked.connect(self.clear_all) # Connect the second clear button
         self.ui.go_button.clicked.connect(self.calculate_and_display)
         self.ui.pushButton_normalize.clicked.connect(self.normalize_composition)
+        if hasattr(self.ui, "printResultsButton"):
+            self.ui.printResultsButton.clicked.connect(self.export_results_to_excel)
+        if hasattr(self.ui, "lineEdit_enter_flow"):
+            self.ui.lineEdit_enter_flow.textChanged.connect(self.update_flow_conversion)
+            self.ui.comboBox_select_units.currentIndexChanged.connect(self.update_flow_conversion)
+            self.ui.comboBox_select_desired_units.currentIndexChanged.connect(self.update_flow_conversion)
 
         # Connect Table Change Signal
         self.ui.tableWidget.itemChanged.connect(self.on_table_item_changed)
@@ -495,6 +1241,7 @@ class MainWindow(QMainWindow):
         # Step 5: Reset progress bar to 0 on EOS change
         if hasattr(self.ui, 'progressBar'):
             self.ui.progressBar.setValue(0)
+        self.invalidate_results()
         selected_eos = self.ui.comboBox_select_EOS.currentText()
         self.calculator.set_eos(selected_eos)
 
@@ -553,8 +1300,8 @@ class MainWindow(QMainWindow):
         # Reset combo index to dummy/placeholder
         self.ui.comboBox_select_components.setCurrentIndex(0)
 
-        # Clear results_list after successful add
-        self.clear_results_list()
+        # Clear results after successful add because prior calculations are now stale.
+        self.invalidate_results()
 
     def remove_component(self):
         """Remove the selected component from the list and table."""
@@ -590,8 +1337,8 @@ class MainWindow(QMainWindow):
             palette.setColor(QPalette.ColorRole.Base, QColor('white'))
             self.ui.comboBox_select_components.setPalette(palette)
 
-        # Clear results_list after successful remove
-        self.clear_results_list()
+        # Clear results after successful remove because prior calculations are now stale.
+        self.invalidate_results()
 
     def _remove_component_from_table(self, comp_name):
         """Helper to remove the row matching comp_name from the table."""
@@ -607,8 +1354,8 @@ class MainWindow(QMainWindow):
         # Step 5: Reset progress bar to 0 on clear all
         if hasattr(self.ui, 'progressBar'):
             self.ui.progressBar.setValue(0)
-        # Clear results_list at the start
-        self.clear_results_list()
+        # Clear results at the start because all prior calculations are now stale.
+        self.invalidate_results()
         # Clear list
         self.ui.selected_components_list.clear()
 
@@ -630,7 +1377,7 @@ class MainWindow(QMainWindow):
         self.ui.comboBox_select_components.setPalette(palette)
         self.ui.comboBox_select_components.setCurrentIndex(0) # Reset selection
         # Reset T/P/EOS combos to defaults maybe?
-        self.ui.comboBox_select_temperature.setCurrentText("15 °C")
+        self.ui.comboBox_select_temperature.setCurrentText("0 °C")
         self.ui.comboBox_select_pressure.setCurrentText("1 atm")
         self.ui.comboBox_select_EOS.setCurrentIndex(0)
 
@@ -672,7 +1419,6 @@ class MainWindow(QMainWindow):
             # Set flags (editability)
             if row != total_row: # Component rows
                 active_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable)
-                inactive_item.setText("") # Clear inactive column value
                 inactive_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable) # Not editable
             else: # Total row
                 active_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable) # Not editable
@@ -680,6 +1426,9 @@ class MainWindow(QMainWindow):
 
         # Unblock signals
         self.ui.tableWidget.blockSignals(False)
+        # Recalculate derived (inactive) column values and then totals for the active column
+        self._recalculate_inactive_column()
+        self.invalidate_results()
         self.update_table_total() # Update totals after changing basis
 
     def on_table_item_changed(self, item):
@@ -690,6 +1439,7 @@ class MainWindow(QMainWindow):
         # Only update if the changed item is in an active percentage column and not the total row
         active_col = 1 if self.ui.radioButton_mol_percent.isChecked() else 2
         if item.column() == active_col and item.row() != self.ui.tableWidget.rowCount() - 1:
+             self.invalidate_results()
              # Basic validation: try converting to float, set red background if invalid?
              try:
                  float(item.text())
@@ -697,6 +1447,8 @@ class MainWindow(QMainWindow):
              except ValueError:
                  if item.text().strip(): # Don't color empty cells red
                       item.setBackground(QColor("pink")) # Indicate invalid number format
+             # Live update of the derived inactive column
+             self._recalculate_inactive_column()
              self.update_table_total()
 
     def update_table_total(self):
@@ -753,7 +1505,7 @@ class MainWindow(QMainWindow):
             self.ui.progressBar.setValue(0)
         # Start animating progress bar to 80% over 1 second as soon as Go! is clicked
         self.animate_progress_to(80, 1000)
-        self.ui.results_list.clear() # Use the new name from gui.py
+        self.invalidate_results()
 
         # --- Gather inputs for worker ---
         comp_names = []
@@ -810,6 +1562,8 @@ class MainWindow(QMainWindow):
 
         # --- Threaded calculation setup ---
         self.ui.go_button.setEnabled(False)
+        if hasattr(self.ui, "printResultsButton"):
+            self.ui.printResultsButton.setEnabled(False)
         self.worker_thread = QThread()
         self.worker = CalculationWorker(
             calculator=self.calculator,
@@ -835,6 +1589,11 @@ class MainWindow(QMainWindow):
 
     def on_calculation_result(self, result_data):
         # Update the UI with calculation results (runs in main thread)
+        self.last_result_data = dict(result_data)
+        self.density_actual_kg_m3 = result_data.get("density_actual_kg_m3")
+        self.density_normal_kg_m3 = result_data.get("density_normal_kg_m3")
+        self.density_standard_kg_m3 = result_data.get("density_standard_kg_m3")
+        self.update_flow_conversion()
         self.ui.results_list.clear()
         self.ui.results_list.addItem(f"Calculating for {result_data['basis']} basis...")
         self.ui.results_list.addItem(f"Avg. Molecular Wt: {result_data['mw']:.2f} g/mol")
@@ -843,32 +1602,59 @@ class MainWindow(QMainWindow):
         phase = result_data['phase']
         error = result_data['density_error']
         if error:
+            self.ui.results_list.addItem("Phase @ selected conditions: N.A.")
+            self.ui.results_list.addItem("Density @ selected conditions: N.A.")
             self.ui.results_list.addItem(f"Density/Phase Error: {error}")
         elif phase == "Two-Phase" and density_result is not None:
             if isinstance(density_result, tuple) and len(density_result) == 2:
                 density_liq, density_gas = density_result
-                self.ui.results_list.addItem(f"Phase @(T,P): {phase}")
+                self.ui.results_list.addItem(f"Phase @ selected conditions: {phase}")
                 if density_liq is not None:
-                    self.ui.results_list.addItem(f"  Density (Liq): {density_liq:.3f} kg/m³")
+                    self.ui.results_list.addItem(f"  Density @ selected conditions (Liq): {density_liq:.3f} kg/m³")
                 else:
-                    self.ui.results_list.addItem(f"  Density (Liq): Calculation Failed")
+                    self.ui.results_list.addItem("  Density @ selected conditions (Liq): N.A.")
                 if density_gas is not None:
-                    self.ui.results_list.addItem(f"  Density (Vap): {density_gas:.3f} kg/m³")
+                    self.ui.results_list.addItem(f"  Density @ selected conditions (Vap): {density_gas:.3f} kg/m³")
                 else:
-                    self.ui.results_list.addItem(f"  Density (Vap): Calculation Failed")
+                    self.ui.results_list.addItem("  Density @ selected conditions (Vap): N.A.")
             else:
-                self.ui.results_list.addItem(f"Phase: {phase} (Result format unexpected)")
+                self.ui.results_list.addItem(f"Phase @ selected conditions: {phase} (Result format unexpected)")
         elif phase == "Liquid" and density_result is not None:
-            self.ui.results_list.addItem(f"Phase @(T,P): {phase}")
-            self.ui.results_list.addItem(f"  Density: {density_result:.3f} kg/m³")
+            self.ui.results_list.addItem(f"Phase @ selected conditions: {phase}")
+            self.ui.results_list.addItem(f"Density @ selected conditions: {density_result:.3f} kg/m³")
         elif phase == "Vapor" and density_result is not None:
-            self.ui.results_list.addItem(f"Phase @(T,P): {phase}")
-            self.ui.results_list.addItem(f"  Density: {density_result:.3f} kg/m³")
+            self.ui.results_list.addItem(f"Phase @ selected conditions: {phase}")
+            self.ui.results_list.addItem(f"Density @ selected conditions: {density_result:.3f} kg/m³")
         elif phase:
-            self.ui.results_list.addItem(f"Phase @(T,P): {phase}")
-            self.ui.results_list.addItem(f"  Density: Calculation Failed")
+            self.ui.results_list.addItem(f"Phase @ selected conditions: {phase}")
+            self.ui.results_list.addItem("Density @ selected conditions: N.A.")
         else:
-            self.ui.results_list.addItem(f"Density/Phase: Could not determine.")
+            self.ui.results_list.addItem("Phase @ selected conditions: Could not determine.")
+            self.ui.results_list.addItem("Density @ selected conditions: N.A.")
+
+        def add_reference_density_line(label, density_value, phase_value, error_value):
+            if density_value is not None:
+                self.ui.results_list.addItem(f"{label}: {density_value:.3f} kg/m³")
+                return
+            detail = ""
+            if error_value:
+                detail = f" ({error_value})"
+            elif phase_value == "Two-Phase":
+                detail = " (Two-Phase)"
+            self.ui.results_list.addItem(f"{label}: N.A.{detail}")
+
+        add_reference_density_line(
+            "Density @ normal conditions",
+            result_data.get("density_normal_kg_m3"),
+            result_data.get("density_normal_phase"),
+            result_data.get("density_normal_error"),
+        )
+        add_reference_density_line(
+            "Density @ standard conditions",
+            result_data.get("density_standard_kg_m3"),
+            result_data.get("density_standard_phase"),
+            result_data.get("density_standard_error"),
+        )
         # Bubble Point
         bubble_point = result_data['bubble_point']
         bp_error = result_data['bp_error']
@@ -886,19 +1672,40 @@ class MainWindow(QMainWindow):
             if missing_lhv:
                 self.ui.results_list.addItem(f"LHV Warning: No data for: {', '.join(missing_lhv)}")
             self.ui.results_list.addItem("-" * 40)
-            self.ui.results_list.addItem(f"Mixture LHV = {mixture_lhv:.2f} MJ/Nm³")
+            lhv_display_values = build_lhv_display_values(mixture_lhv, result_data['mw'])
+            volumetric_lines = [
+                ("Mixture LHV = ", "MJ/Nm³"),
+                ("= ", "kcal/Nm³"),
+                ("= ", "MMkcal/Nm³"),
+                ("= ", "GJ/Nm³"),
+                ("= ", "MMBtu/Nm³"),
+            ]
+            for prefix, unit in volumetric_lines:
+                self.ui.results_list.addItem(
+                    f"{prefix}{format_lhv_display_value(lhv_display_values['volumetric'][unit])} {unit}"
+                )
+
+            self.ui.results_list.addItem("")
+            self.ui.results_list.addItem("Mass basis:")
+            for unit in ["MJ/kg", "MJ/t", "GJ/kg", "GJ/t", "kcal/kg", "kcal/t", "MMkcal/kg", "MMkcal/t", "MMBtu/kg", "MMBtu/t"]:
+                self.ui.results_list.addItem(
+                    f"= {format_lhv_display_value(lhv_display_values['mass_basis'][unit])} {unit}"
+                )
         else:
             self.ui.results_list.addItem("-" * 40)
             self.ui.results_list.addItem("Mixture LHV = N/A (DB not loaded)")
         self.animate_progress_to(100, 500)
 
     def on_calculation_error(self, error_msg):
+        self.invalidate_results(clear_visible_results=False)
         self.ui.results_list.clear()
         self.ui.results_list.addItem(error_msg)
         self.animate_progress_to(100, 500)
 
     def on_calculation_finished(self):
         self.ui.go_button.setEnabled(True)
+        if hasattr(self.ui, "printResultsButton"):
+            self.ui.printResultsButton.setEnabled(True)
 
     def normalize_composition(self):
         """Normalize the active composition column (mol% or wt%) so the sum is 100%."""
@@ -941,6 +1748,7 @@ class MainWindow(QMainWindow):
                 item.setText(f"{norm_val:.4f}")
         self.ui.tableWidget.blockSignals(False)
 
+        self.invalidate_results()
         self.update_table_total()
         # Optionally, provide user feedback in the results list
         if hasattr(self.ui, 'results_list'):
@@ -951,7 +1759,7 @@ class MainWindow(QMainWindow):
         # Step 5: Reset progress bar to 0 on T/P change
         if hasattr(self.ui, 'progressBar'):
             self.ui.progressBar.setValue(0)
-        self.ui.results_list.clear()
+        self.invalidate_results()
 
     def clear_results_list(self):
         """Clear the results_list widget."""
