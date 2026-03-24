@@ -854,6 +854,8 @@ class MainWindow(QMainWindow):
         # --- Set up the UI from Designer ---
         self.ui = Ui_Dialog()
         self.ui.setupUi(self) # Setup the UI onto this QMainWindow
+        if hasattr(self.ui, "tabWidget"):
+            self.ui.tabWidget.setCurrentIndex(0)
 
         # Step 2: Progress bar animation state
         self.progress_timer = None
@@ -893,7 +895,7 @@ class MainWindow(QMainWindow):
             self.ui.printResultsButton.setEnabled(True)
 
         # Set Window Title (Optional - can also be set in Designer)
-        self.setWindowTitle("Thermo Calculator - prototype v.0.1")
+        self.setWindowTitle("Thermo Calculator - v.1.0")
 
     def _parse_float_or_zero(self, text: str) -> float:
         """Parse float from a table cell; treat blanks/invalid as 0.0."""
@@ -1421,9 +1423,17 @@ class MainWindow(QMainWindow):
         self.ui.comboBox_select_desired_units.addItems(FLOW_UNIT_ORDER)
         self.ui.comboBox_select_units.setCurrentText("kg/h")
         self.ui.comboBox_select_desired_units.setCurrentText("t/d")
-        self.ui.lineEdit_result.setReadOnly(True)
-        self.ui.lineEdit_in_desired_units.setReadOnly(True)
+        self._configure_copyable_flow_output(self.ui.lineEdit_result)
+        self._configure_copyable_flow_output(self.ui.lineEdit_in_desired_units)
         self.update_flow_conversion()
+
+    def _configure_copyable_flow_output(self, line_edit):
+        """Keep flow outputs read-only while preserving selection and copy behavior."""
+        line_edit.setReadOnly(True)
+        line_edit.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        line_edit.setContextMenuPolicy(Qt.ContextMenuPolicy.DefaultContextMenu)
+        line_edit.setCursor(Qt.CursorShape.IBeamCursor)
+        line_edit.setDragEnabled(True)
 
     def update_flow_conversion(self):
         """Recalculate the Flow-tab conversion using the latest density state."""
