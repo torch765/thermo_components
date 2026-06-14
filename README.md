@@ -1,62 +1,93 @@
 # Thermo Components
 
-   A PyQt6-based desktop application for calculating thermodynamic properties of gas and liquid mixtures.  
-   The program allows users to select chemical components, specify their composition, and compute properties such as density, phase, bubble point temperature, and lower heating value (LHV) using the `thermo` Python library.
+Thermo Components is a PyQt6 desktop application for calculating thermodynamic properties of gas and liquid mixtures. It currently provides a GUI for component selection, composition entry, density and phase calculations, bubble-point estimation, lower heating value (LHV) lookup, flow conversion, and Excel report export.
 
-   ## Features
-   - User-friendly GUI
-   - Supports multiple components 
-   - Calculates density at selected conditions, normal conditions, and standard conditions
-   - Calculates phase, bubble point, and LHV
-   - Shows non-modal warning messages for water-containing systems when using `PRMIX`
-   - Automatically overrides pure-water calculations to `IAPWS-95`
+## Status
 
-   ## Requirements
-   - Python 3.x
-   - PyQt6
-   - thermo
-   - openpyxl (required for Excel report export)
-   - Install the validated app stack with `python -m pip install -r requirements.txt`
+The application works today as a single-user desktop tool. The UI, orchestration, and external integrations are still largely organized around [density.py](density.py), while the first architecture extraction has moved pure calculation rules into `src/thermo_components/domain`.
 
-   ## Usage
-   1. Run `python density.py`
-   2. Select components and enter compositions
-   3. Set temperature and pressure
-   4. Enter composition in mol% or wt%
-   5. Click Go to see results for:
-      - density at the selected temperature and pressure
-      - density at normal conditions for `Nm3` basis support
-      - density at standard conditions for `Sm3` / standard liquid basis support
-      - phase, bubble point, and LHV
-      - persistent thermo warnings when water is present with `PRMIX`
+## Features
 
-   ## Thermo Warnings
-   - The main thermo tab now shows a visible, non-modal warning banner above the Results area when water is present.
-   - `PRMIX` may be unreliable for aqueous or polar behavior, so water-containing results should be treated with caution.
-   - Pure water no longer uses the default `PRMIX` route; it automatically switches to `IAPWS-95`, so the warning banner is suppressed in that special case.
-   - Water-containing mixtures still use the default `PRMIX` route and therefore still show warnings.
-   - The exported Excel report includes the same warning text in a dedicated `Warnings` section when applicable.
+- Multi-component mixture entry in `Mol %` or `Wt %`
+- Density at selected, normal, and standard conditions
+- Phase and bubble-point calculation
+- Mixture LHV reporting on volumetric and mass bases
+- Flow conversion between mass and reference-volume units
+- Excel report export with warnings and calculated results
+- Special handling for pure-water calculations through `IAPWS-95`
 
-   ## Reference Density Bases
-   - Normal conditions = `0 °C`, `1 atm`
-   - Standard conditions = `60 °F`, `1 atm` (`15.5555556 °C`, `1 atm`)
+## Quick Start
 
-   ## Flow Tab
-   The `Flow` tab converts between mass-flow units and reference-volume-flow units using the densities produced by the first tab.
+1. Create and activate a Python virtual environment.
+2. Install dependencies:
 
-   Supported units:
-   - Mass: `kg/h`, `kg/d`, `t/h`, `t/d`, `lb/h`, `lb/d`, `Klb/h`, `Klb/d`
-   - Reference volume: `Nm3/h`, `Nm3/d`, `Sm3/h`, `Sm3/d`, `bbl/h`, `bbl/d`, `SCFH`, `MSCFD`, `MMSCFD`
+```powershell
+python -m pip install -r requirements.txt
+```
 
-   Basis logic:
-   - `Nm3` uses the normal reference density at `0 °C` and `1 atm`
-   - `Sm3`, `SCFH`, `MSCFD`, `MMSCFD`, and `bbl` use the standard reference density at `60 °F` and `1 atm`
-   - Cross-basis conversions such as `Nm3` to `Sm3` convert through mass and may require both reference densities
+3. Run the desktop app:
 
-   Density usage:
-   - Mass-to-mass and same-basis reference-volume conversions do not require density
-   - Mass-to-`Nm3` and `Nm3`-to-mass conversions use normal density
-   - Mass-to-standard-basis volume and standard-basis-volume-to-mass conversions use standard density
+```powershell
+python density.py
+```
 
-   ## License
-   GPL-3.0
+## Tests
+
+Install the development dependencies and run the characterization suite:
+
+```powershell
+python -m pip install -r requirements-dev.txt
+python -m pytest
+```
+
+The tests run Qt in offscreen mode and do not display the application window.
+
+## Project Docs
+
+- Architecture target: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- Refactor roadmap: [docs/REFACTOR_ROADMAP.md](docs/REFACTOR_ROADMAP.md)
+- Contribution workflow: [CONTRIBUTING.md](CONTRIBUTING.md)
+- Change history: [DEVLOG.md](DEVLOG.md)
+
+## Current Repository Layout
+
+```text
+thermo_components/
+  density.py          # Main application entry point and current monolith
+  gui.ui              # Qt Designer source
+  gui.py              # Generated PyQt UI module
+  lhv_data.py         # SQLite seed helper for LHV data
+  lhv_data.db         # Runtime LHV lookup database
+  density.spec        # PyInstaller spec
+  pyproject.toml       # Test runner configuration
+  requirements-dev.txt
+  src/
+    thermo_components/
+      domain/          # Extracted framework-free business rules
+      application/     # Reserved for Phase 2 use cases
+      adapters/        # Reserved for external integrations
+      bootstrap/       # Reserved for dependency wiring
+  tests/               # Characterization tests
+  docs/               # Architecture and roadmap documents
+```
+
+## Architectural Direction
+
+The target design is a practical hexagonal architecture:
+
+- The domain layer will own mixture rules, units, warnings, and result semantics.
+- The application layer will own use cases such as property calculation, flow conversion, normalization, and report export.
+- Adapters will isolate PyQt, `thermo`, SQLite, Excel, and packaging concerns.
+- The current UI should remain functional throughout the migration; this is an incremental refactor, not a rewrite branch.
+
+Phase 1 is complete. Composition, reference conditions, flow conversion, LHV, route selection, warnings, and density-result interpretation now live in the domain package. Phase 2 will introduce application use cases and typed workflow DTOs.
+
+## Development Notes
+
+- `gui.py` is generated from `gui.ui` and should not become a home for business logic.
+- Runtime behavior should be preserved during refactor work unless a change is intentional and documented.
+- New behavior should be covered by tests as the architecture is extracted.
+
+## License
+
+GPL-3.0

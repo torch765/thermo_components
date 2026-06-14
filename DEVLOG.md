@@ -1,5 +1,17 @@
 ## DEVLOG
 
+### 2026-06-14
+- Added project-level architecture documentation for the planned DDD-inspired, hexagonal refactor.
+- Added a phased refactor roadmap with concrete PR sequencing and extraction order.
+- Added a `CONTRIBUTING.md` guide to capture development rules, refactor constraints, and documentation expectations.
+- Reworked `README.md` so the repo has a proper project overview, startup guide, and links to architecture documents.
+- Completed refactor Phase 0 by adding the `src/thermo_components` package skeleton and pytest configuration.
+- Added characterization tests for flow conversion, composition rules, route and warning policies, LHV derivation, normalization, and report projection.
+- Added `requirements-dev.txt` to keep test tooling separate from runtime dependencies.
+- Completed refactor Phase 1 by extracting framework-free domain modules for composition, reference conditions, flow conversion, LHV, thermo routes, warnings, and density-result interpretation.
+- Updated `density.py` to delegate pure rules to the domain package while retaining its existing public names and UI behavior.
+- Expanded the test suite to cover direct domain APIs and enforce the domain dependency boundary.
+
 ### 2026-03-20
 - Added an automatic pure-water model override so effectively pure water now uses `IAPWS-95` instead of the default `PRMIX` route.
 - Suppressed the warning banner for pure water because it no longer uses `PRMIX`, while preserving the existing warning behavior for water-containing mixtures.

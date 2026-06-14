@@ -21,79 +21,72 @@ from gui import Ui_Dialog
 from thermo import ChemicalConstantsPackage, CEOSGas, CEOSLiquid, FlashVL, PRMIX, FlashPureVLS, IAPWS95
 # from thermo.eos_mix import PRMIX # Explicit import if needed
 
-
-# --- Constants and Data Loading (Keep as is) ---
-MOLECULAR_WEIGHTS = {
-    "        ": 0.0,  # Dummy entry
-    "hydrogen": 2.016, "carbon dioxide": 44.01, "carbon monoxide": 28.01,
-    "hydrogen sulfide": 34.08, "methane": 16.04, "ethane": 30.07,
-    "ethylene": 28.05, "propane": 44.10, "propylene": 42.08,
-    "isobutane": 58.12, "n-butane": 58.12, "isobutylene": 56.11,
-    "n-butylene": 56.11, "1-butene": 56.11, "2-butene": 56.11,
-    "butadiene": 54.09, "isopentane": 72.15, "n-pentane": 72.15,
-    "hexane": 86.18, "heptane": 100.20, "benzene": 78.11,
-    "toluene": 92.14, "o-xylene": 106.17, "m-xylene": 106.17,
-    "p-xylene": 106.17, "ethylbenzene": 106.17, "cumene": 120.19,
-    "octane": 114.23, "nonane": 128.26, "oxygen": 32.00,
-    "nitrogen": 28.01, "argon": 39.95, "water": 18.015,
-}
-
-R = 0.082057  # L·atm/(mol·K)
-KCAL_PER_MJ = 238.845896627
-MJ_PER_MMBTU = 1055.05585262
-NORMAL_MOLAR_VOLUME_NM3_PER_KMOL = 22.414
-NORMAL_T_C = 0.0
-NORMAL_P_ATM = 1.0
-STANDARD_T_F = 60.0
-STANDARD_T_C = (STANDARD_T_F - 32.0) * 5.0 / 9.0
-STANDARD_P_ATM = 1.0
-ATM_TO_PA = 101325.0
-KG_PER_TONNE = 1000.0
-KG_PER_LB = 0.45359237
-LB_PER_KLB = 1000.0
-HOURS_PER_DAY = 24.0
-M3_PER_BBL = 0.158987294928
-FT3_PER_M3 = 35.3146667
-M3_PER_FT3 = 0.028316846592
-
-FLOW_UNIT_ORDER = [
-    "kg/h", "kg/d", "t/h", "t/d", "lb/h", "lb/d", "Klb/h", "Klb/d",
-    "Nm3/h", "Nm3/d", "Sm3/h", "Sm3/d", "bbl/h", "bbl/d", "SCFH", "MSCFD", "MMSCFD",
-]
-
-FLOW_UNIT_DEFINITIONS = {
-    "kg/h": {"dimension": "mass", "basis": "none", "amount_to_base": 1.0, "time_to_day": HOURS_PER_DAY},
-    "kg/d": {"dimension": "mass", "basis": "none", "amount_to_base": 1.0, "time_to_day": 1.0},
-    "t/h": {"dimension": "mass", "basis": "none", "amount_to_base": KG_PER_TONNE, "time_to_day": HOURS_PER_DAY},
-    "t/d": {"dimension": "mass", "basis": "none", "amount_to_base": KG_PER_TONNE, "time_to_day": 1.0},
-    "lb/h": {"dimension": "mass", "basis": "none", "amount_to_base": KG_PER_LB, "time_to_day": HOURS_PER_DAY},
-    "lb/d": {"dimension": "mass", "basis": "none", "amount_to_base": KG_PER_LB, "time_to_day": 1.0},
-    "Klb/h": {"dimension": "mass", "basis": "none", "amount_to_base": KG_PER_LB * LB_PER_KLB, "time_to_day": HOURS_PER_DAY},
-    "Klb/d": {"dimension": "mass", "basis": "none", "amount_to_base": KG_PER_LB * LB_PER_KLB, "time_to_day": 1.0},
-    "Nm3/h": {"dimension": "ref_volume", "basis": "normal", "amount_to_base": 1.0, "time_to_day": HOURS_PER_DAY},
-    "Nm3/d": {"dimension": "ref_volume", "basis": "normal", "amount_to_base": 1.0, "time_to_day": 1.0},
-    "Sm3/h": {"dimension": "ref_volume", "basis": "standard", "amount_to_base": 1.0, "time_to_day": HOURS_PER_DAY},
-    "Sm3/d": {"dimension": "ref_volume", "basis": "standard", "amount_to_base": 1.0, "time_to_day": 1.0},
-    "bbl/h": {"dimension": "ref_volume", "basis": "standard", "amount_to_base": M3_PER_BBL, "time_to_day": HOURS_PER_DAY},
-    "bbl/d": {"dimension": "ref_volume", "basis": "standard", "amount_to_base": M3_PER_BBL, "time_to_day": 1.0},
-    "SCFH": {"dimension": "ref_volume", "basis": "standard", "amount_to_base": M3_PER_FT3, "time_to_day": HOURS_PER_DAY},
-    "MSCFD": {"dimension": "ref_volume", "basis": "standard", "amount_to_base": 1000.0 * M3_PER_FT3, "time_to_day": 1.0},
-    "MMSCFD": {"dimension": "ref_volume", "basis": "standard", "amount_to_base": 1_000_000.0 * M3_PER_FT3, "time_to_day": 1.0},
-}
-
-WATER_COMPONENT_ALIASES = {"water", "h2o"}
-PURE_WATER_WARNING_FRACTION = 0.999
-PURE_WATER_ROUTE = "iapws95_pure_water"
-PRMIX_DEFAULT_ROUTE = "prmix_default"
-IAPWS95_MODEL_DISPLAY = "IAPWS-95"
-IAPWS95_TWO_PHASE_REL_TOL = 1e-4
-PRMIX_WATER_WARNING = (
-    "Warning: Water is present. PRMIX results may be unreliable for aqueous or polar behavior. "
-    "Use with caution."
+from thermo_components.domain.composition import (
+    MOLECULAR_WEIGHTS,
+    PURE_WATER_WARNING_FRACTION,
+    WATER_COMPONENT_ALIASES,
+    active_basis_amount_rows as _active_basis_amount_rows,
+    calculate_mixture_molecular_weight,
+    derive_inactive_percentages,
+    has_water_component,
+    is_effectively_pure_water,
+    is_water_component,
+    normalize_component_identity,
+    normalize_percentages,
+    percentages_to_mole_fractions,
+    water_fraction_active_basis,
 )
-PRMIX_TWO_PHASE_WATER_WARNING = (
-    "Warning: Water-containing two-phase behavior may be unreliable with PRMIX. "
-    "Validate density and phase behavior with a water-capable method."
+from thermo_components.domain.conditions import (
+    ATM_TO_PA,
+    NORMAL_P_ATM,
+    NORMAL_T_C,
+    R,
+    STANDARD_P_ATM,
+    STANDARD_T_C,
+    STANDARD_T_F,
+    atm_to_pa,
+    celsius_to_kelvin,
+)
+from thermo_components.domain.flow_conversion import (
+    convert_flow,
+    format_flow_value,
+    parse_flow_input,
+)
+from thermo_components.domain.flow_units import (
+    FLOW_UNIT_DEFINITIONS,
+    FLOW_UNIT_ORDER,
+    FT3_PER_M3,
+    HOURS_PER_DAY,
+    KG_PER_LB,
+    KG_PER_TONNE,
+    LB_PER_KLB,
+    M3_PER_BBL,
+    M3_PER_FT3,
+)
+from thermo_components.domain.lhv import (
+    KCAL_PER_MJ,
+    MJ_PER_MMBTU,
+    NORMAL_MOLAR_VOLUME_NM3_PER_KMOL,
+    build_lhv_display_values,
+    calculate_mixture_lhv,
+    format_lhv_display_value,
+)
+from thermo_components.domain.results import (
+    build_density_note,
+    extract_scalar_density_value,
+)
+from thermo_components.domain.thermo_routes import (
+    IAPWS95_MODEL_DISPLAY,
+    IAPWS95_TWO_PHASE_REL_TOL,
+    PRMIX_DEFAULT_ROUTE,
+    PURE_WATER_ROUTE,
+    select_thermo_route,
+)
+from thermo_components.domain.warnings import (
+    PRMIX_TWO_PHASE_WATER_WARNING,
+    PRMIX_WATER_WARNING,
+    build_thermo_warning_messages,
+    phase_indicates_two_phase,
 )
 
 def load_lhv_data(db_path='lhv_data.db'):
@@ -127,74 +120,6 @@ def resource_path(relative_path):
     return os.path.join(os.path.abspath("."), relative_path)
 
 
-def build_lhv_display_values(lhv_mj_nm3: float, mw_g_mol: float) -> dict:
-    """Build display-ready LHV values from the base mixture MJ/Nm³ result."""
-    try:
-        lhv_mj_nm3 = float(lhv_mj_nm3)
-    except (TypeError, ValueError):
-        lhv_mj_nm3 = 0.0
-
-    try:
-        mw_g_mol = float(mw_g_mol)
-    except (TypeError, ValueError):
-        mw_g_mol = 0.0
-
-    kcal_per_nm3 = lhv_mj_nm3 * KCAL_PER_MJ
-
-    values = {
-        "volumetric": {
-            "MJ/Nm³": lhv_mj_nm3,
-            "kcal/Nm³": kcal_per_nm3,
-            "MMkcal/Nm³": kcal_per_nm3 / 1_000_000.0,
-            "GJ/Nm³": lhv_mj_nm3 / 1000.0,
-            "MMBtu/Nm³": lhv_mj_nm3 / MJ_PER_MMBTU,
-        },
-        "mass_basis": {
-            "MJ/kg": None,
-            "MJ/t": None,
-            "GJ/kg": None,
-            "GJ/t": None,
-            "kcal/kg": None,
-            "kcal/t": None,
-            "MMkcal/kg": None,
-            "MMkcal/t": None,
-            "MMBtu/kg": None,
-            "MMBtu/t": None,
-        },
-    }
-
-    if mw_g_mol > 0:
-        kg_per_nm3 = mw_g_mol / NORMAL_MOLAR_VOLUME_NM3_PER_KMOL
-        if kg_per_nm3 > 0:
-            mj_per_kg = lhv_mj_nm3 / kg_per_nm3
-            mj_per_t = mj_per_kg * 1000.0
-            kcal_per_kg = mj_per_kg * KCAL_PER_MJ
-            kcal_per_t = kcal_per_kg * 1000.0
-            values["mass_basis"] = {
-                "MJ/kg": mj_per_kg,
-                "MJ/t": mj_per_t,
-                "GJ/kg": mj_per_kg / 1000.0,
-                "GJ/t": mj_per_t / 1000.0,
-                "kcal/kg": kcal_per_kg,
-                "kcal/t": kcal_per_t,
-                "MMkcal/kg": kcal_per_kg / 1_000_000.0,
-                "MMkcal/t": kcal_per_t / 1_000_000.0,
-                "MMBtu/kg": mj_per_kg / MJ_PER_MMBTU,
-                "MMBtu/t": mj_per_t / MJ_PER_MMBTU,
-            }
-
-    # TODO: Add MW output once a flow input (for example Nm³/h or t/h) is introduced.
-    return values
-
-
-def format_lhv_display_value(value: float | None) -> str:
-    """Format LHV values with readable precision for the results pane."""
-    if value is None:
-        return "N/A"
-    decimals = 2 if abs(value) >= 1 else 4
-    return f"{value:.{decimals}f}"
-
-
 def get_excel_number_format(unit: str) -> str:
     """Return a sensible Excel number format for the given engineering unit."""
     if unit in {"Mol %", "Wt %"}:
@@ -207,225 +132,6 @@ def get_excel_number_format(unit: str) -> str:
         return "0.00"
     return "General"
 
-
-def celsius_to_kelvin(temperature_c: float) -> float:
-    return temperature_c + 273.15
-
-
-def atm_to_pa(pressure_atm: float) -> float:
-    return pressure_atm * ATM_TO_PA
-
-
-def extract_scalar_density_value(density_result, phase, error) -> float | None:
-    """Return a single density value only when the flash result is scalar."""
-    if error or density_result is None:
-        return None
-    if phase == "Two-Phase" or isinstance(density_result, tuple):
-        return None
-    try:
-        return float(density_result)
-    except (TypeError, ValueError):
-        return None
-
-
-def build_density_note(phase, error) -> str:
-    """Build a short note for density rows in the export report."""
-    if error:
-        return error
-    if phase == "Two-Phase":
-        return "Two-Phase result"
-    if phase:
-        return f"Phase: {phase}"
-    return ""
-
-
-def normalize_component_identity(name: str) -> str:
-    """Normalize a component identifier for warning checks."""
-    cleaned = str(name).strip().lower()
-    compact = "".join(character for character in cleaned if character.isalnum())
-    if compact == "h2o":
-        return "water"
-    return cleaned
-
-
-def is_water_component(name: str) -> bool:
-    """Return True when the component name maps to water."""
-    return normalize_component_identity(name) in WATER_COMPONENT_ALIASES
-
-
-def _active_basis_amount_rows(comp_names, mol_percents, wt_percents, basis: str) -> tuple[list[tuple[str, float]], float]:
-    """Return positive active-basis amounts keyed by normalized component identity."""
-    active_values = mol_percents if basis == "Mol %" else wt_percents
-    rows = []
-    total_active = 0.0
-
-    for comp_name, raw_value in zip(comp_names, active_values):
-        try:
-            value = float(raw_value)
-        except (TypeError, ValueError):
-            continue
-
-        if value <= 0:
-            continue
-
-        rows.append((normalize_component_identity(comp_name), value))
-        total_active += value
-
-    return rows, total_active
-
-
-def has_water_component(comp_names, mol_percents, wt_percents, basis: str) -> bool:
-    """Return True when water is present at a non-zero amount on the active basis."""
-    rows, _ = _active_basis_amount_rows(comp_names, mol_percents, wt_percents, basis)
-    return any(is_water_component(name) for name, _ in rows)
-
-
-def water_fraction_active_basis(comp_names, mol_percents, wt_percents, basis: str) -> float:
-    """Return the water fraction on the active input basis."""
-    rows, total_active = _active_basis_amount_rows(comp_names, mol_percents, wt_percents, basis)
-    if total_active <= 0:
-        return 0.0
-    water_active = sum(value for name, value in rows if is_water_component(name))
-    return water_active / total_active
-
-
-def is_effectively_pure_water(comp_names, mol_percents, wt_percents, basis: str) -> bool:
-    """Return True when the active-basis composition is effectively pure water."""
-    rows, total_active = _active_basis_amount_rows(comp_names, mol_percents, wt_percents, basis)
-    if total_active <= 0:
-        return False
-
-    water_active = sum(value for name, value in rows if is_water_component(name))
-    other_active = total_active - water_active
-    if water_active <= 0:
-        return False
-
-    water_fraction = water_active / total_active
-    other_fraction = other_active / total_active
-    return water_fraction >= PURE_WATER_WARNING_FRACTION and other_fraction <= (1.0 - PURE_WATER_WARNING_FRACTION)
-
-
-def select_thermo_route(comp_names, mol_percents, wt_percents, basis: str, default_eos: str) -> dict:
-    """Select the thermo route for the current composition."""
-    if is_effectively_pure_water(comp_names, mol_percents, wt_percents, basis):
-        return {
-            "route_id": PURE_WATER_ROUTE,
-            "model_display": IAPWS95_MODEL_DISPLAY,
-        }
-    return {
-        "route_id": PRMIX_DEFAULT_ROUTE,
-        "model_display": str(default_eos or "PRMIX").strip() or "PRMIX",
-    }
-
-
-def phase_indicates_two_phase(phase) -> bool:
-    """Return True when the phase text indicates two-phase behavior."""
-    return "two-phase" in str(phase or "").strip().lower()
-
-
-def build_thermo_warning_messages(comp_names, mol_percents, wt_percents, basis: str, thermo_route: str, result_data: dict) -> list[str]:
-    """Build the persistent thermo warnings shown in the main tab and export."""
-    if thermo_route != PRMIX_DEFAULT_ROUTE:
-        return []
-
-    if not has_water_component(comp_names, mol_percents, wt_percents, basis):
-        return []
-
-    messages = []
-    messages.append(PRMIX_WATER_WARNING)
-
-    has_two_phase_warning_condition = any(
-        phase_indicates_two_phase(result_data.get(key))
-        for key in ("phase", "density_normal_phase", "density_standard_phase")
-    )
-    if has_two_phase_warning_condition:
-        messages.append(PRMIX_TWO_PHASE_WATER_WARNING)
-
-    return messages
-
-
-def parse_flow_input(text: str) -> float | None:
-    """Parse a flow input, tolerating spaces and thousands separators."""
-    cleaned = str(text).strip().replace(",", "").replace(" ", "")
-    if not cleaned:
-        return None
-    return float(cleaned)
-
-
-def format_flow_value(value: float) -> str:
-    """Format flow results without scientific notation for typical engineering values."""
-    formatted = f"{value:,.6f}"
-    if "." in formatted:
-        formatted = formatted.rstrip("0").rstrip(".")
-    return formatted
-
-
-def _coerce_positive_density(value) -> float | None:
-    try:
-        density = float(value)
-    except (TypeError, ValueError):
-        return None
-    if density <= 0:
-        return None
-    return density
-
-
-def _required_density_bases(from_meta: dict, to_meta: dict) -> set[str]:
-    if from_meta["dimension"] == "mass" and to_meta["dimension"] == "mass":
-        return set()
-    if from_meta["dimension"] == "mass":
-        return {to_meta["basis"]}
-    if to_meta["dimension"] == "mass":
-        return {from_meta["basis"]}
-    if from_meta["basis"] == to_meta["basis"]:
-        return set()
-    return {from_meta["basis"], to_meta["basis"]}
-
-
-def _missing_density_message(missing_bases: set[str]) -> str:
-    if missing_bases == {"normal"}:
-        return "Normal density required"
-    if missing_bases == {"standard"}:
-        return "Standard density required"
-    return "Normal and standard densities required"
-
-
-def convert_flow(value, from_unit, to_unit, density_normal_kg_m3=None, density_standard_kg_m3=None):
-    """Convert between mass and reference-volume flow units using density bridges."""
-    from_meta = FLOW_UNIT_DEFINITIONS.get(from_unit)
-    to_meta = FLOW_UNIT_DEFINITIONS.get(to_unit)
-    if from_meta is None or to_meta is None:
-        raise ValueError("Select source and destination units")
-
-    value = float(value)
-    required_bases = _required_density_bases(from_meta, to_meta)
-    density_map = {
-        "normal": _coerce_positive_density(density_normal_kg_m3),
-        "standard": _coerce_positive_density(density_standard_kg_m3),
-    }
-    missing_bases = {basis for basis in required_bases if density_map.get(basis) is None}
-    if missing_bases:
-        raise ValueError(_missing_density_message(missing_bases))
-
-    from_base_per_day = value * from_meta["amount_to_base"] * from_meta["time_to_day"]
-
-    if from_meta["dimension"] == "mass":
-        mass_kg_day = from_base_per_day
-        if to_meta["dimension"] == "mass":
-            return mass_kg_day / (to_meta["amount_to_base"] * to_meta["time_to_day"])
-        target_volume_m3_day = mass_kg_day / density_map[to_meta["basis"]]
-        return target_volume_m3_day / (to_meta["amount_to_base"] * to_meta["time_to_day"])
-
-    source_volume_m3_day = from_base_per_day
-    if to_meta["dimension"] == "ref_volume" and from_meta["basis"] == to_meta["basis"]:
-        return source_volume_m3_day / (to_meta["amount_to_base"] * to_meta["time_to_day"])
-
-    mass_kg_day = source_volume_m3_day * density_map[from_meta["basis"]]
-    if to_meta["dimension"] == "mass":
-        return mass_kg_day / (to_meta["amount_to_base"] * to_meta["time_to_day"])
-
-    target_volume_m3_day = mass_kg_day / density_map[to_meta["basis"]]
-    return target_volume_m3_day / (to_meta["amount_to_base"] * to_meta["time_to_day"])
 
 # Step 1: Worker class for threaded calculation
 class CalculationWorker(QObject):
@@ -448,37 +154,31 @@ class CalculationWorker(QObject):
     def run(self):
         try:
             # --- Convert to mole fractions based on input basis ---
-            mole_fracs_dict = {}
             if self.basis == "Mol %":
-                total_mol_percent = sum(self.mol_percents)
-                if abs(total_mol_percent - 100.0) > 1e-4 or total_mol_percent == 0:
+                active_percentages = self.mol_percents
+                total_percent = sum(active_percentages)
+                if abs(total_percent - 100.0) > 1e-4 or total_percent == 0:
                     self.error.emit("Error: Invalid Mol % input.")
                     self.finished.emit()
                     return
-                for name, percent in zip(self.comp_names, self.mol_percents):
-                    mole_fracs_dict[name] = percent / 100.0
             else:
-                total_wt_percent = sum(self.wt_percents)
-                if abs(total_wt_percent - 100.0) > 1e-4 or total_wt_percent == 0:
+                active_percentages = self.wt_percents
+                total_percent = sum(active_percentages)
+                if abs(total_percent - 100.0) > 1e-4 or total_percent == 0:
                     self.error.emit("Error: Invalid Wt % input.")
                     self.finished.emit()
                     return
-                moles = {}
-                total_moles = 0.0
-                for name, percent in zip(self.comp_names, self.wt_percents):
-                    mw = MOLECULAR_WEIGHTS.get(name)
-                    if mw is None or mw <= 0:
-                        self.error.emit(f"Error: Missing or invalid MW for {name}.")
-                        self.finished.emit()
-                        return
-                    moles[name] = (percent / 100.0) * 100.0 / mw
-                    total_moles += moles[name]
-                if total_moles == 0:
-                    self.error.emit("Error: Total moles is zero after Wt% conversion.")
-                    self.finished.emit()
-                    return
-                for name in self.comp_names:
-                    mole_fracs_dict[name] = moles[name] / total_moles
+
+            try:
+                mole_fracs_dict = percentages_to_mole_fractions(
+                    self.comp_names,
+                    active_percentages,
+                    self.basis,
+                )
+            except ValueError as exc:
+                self.error.emit(f"Error: {exc}")
+                self.finished.emit()
+                return
 
             self.calculator.set_components(mole_fracs_dict)
             thermo_route = select_thermo_route(
@@ -577,18 +277,7 @@ class MixtureCalculator:
         print(f"EOS set to: {self.eos}") # Debug print
 
     def calculate_molecular_weight(self):
-        if not self.components: return 0.0
-        mw_sum = 0.0
-        frac_sum = sum(self.components.values())
-        if frac_sum == 0: return 0.0
-
-        normalized_components = {comp: frac / frac_sum for comp, frac in self.components.items()}
-
-        for comp_name, mole_frac in normalized_components.items():
-            mw = MOLECULAR_WEIGHTS.get(comp_name, 0.0)
-            mw_sum += mw * mole_frac
-        # The average MW doesn't depend on the sum of fractions if normalized
-        return mw_sum # / frac_sum if frac_sum > 0 else 0.0 -> removed as normalized
+        return calculate_mixture_molecular_weight(self.components)
 
     def calculate_density_for_route(self, temperature_k, pressure_pa, route_id):
         """Dispatch density calculation to the selected thermo route."""
@@ -830,20 +519,7 @@ class MixtureCalculator:
 
     def calculate_lhv(self, lhv_data):
         """Calculates the LHV of the mixture based on mole fractions (MJ/Nm³)."""
-        if not self.components: return 0.0, []
-        mixture_lhv = 0.0
-        missing_components = []
-        total_fraction = sum(self.components.values())
-        if total_fraction == 0: return 0.0, []
-
-        normalized_components = {comp: frac / total_fraction for comp, frac in self.components.items()}
-        for comp_name, mole_frac in normalized_components.items():
-            component_lhv = lhv_data.get(comp_name)
-            if component_lhv is not None:
-                mixture_lhv += mole_frac * component_lhv
-            else:
-                if comp_name.strip(): missing_components.append(comp_name)
-        return mixture_lhv, missing_components
+        return calculate_mixture_lhv(self.components, lhv_data)
 
 
 # --- MainWindow Class (Modified for gui.py) ---
@@ -922,7 +598,6 @@ class MainWindow(QMainWindow):
 
         names = []
         active_vals = []
-        mws = []
 
         for row in range(total_row):
             name_item = self.ui.tableWidget.item(row, 0)
@@ -934,30 +609,8 @@ class MainWindow(QMainWindow):
             active_item = self.ui.tableWidget.item(row, active_col)
             active_vals.append(self._parse_float_or_zero(active_item.text() if active_item else ""))
 
-            mw = MOLECULAR_WEIGHTS.get(name, 0.0)
-            mws.append(mw if mw is not None else 0.0)
-
-        derived = [None] * len(names)
-        if is_mol_basis:
-            # Mol% -> Wt%
-            masses = []
-            total_mass = 0.0
-            for mol, mw in zip(active_vals, mws):
-                m = (mol * mw) if (mw and mw > 0 and mol != 0) else 0.0
-                masses.append(m)
-                total_mass += m
-            if total_mass > 0:
-                derived = [(100.0 * m / total_mass) for m in masses]
-        else:
-            # Wt% -> Mol%
-            moles = []
-            total_moles = 0.0
-            for wt, mw in zip(active_vals, mws):
-                n = (wt / mw) if (mw and mw > 0 and wt != 0) else 0.0
-                moles.append(n)
-                total_moles += n
-            if total_moles > 0:
-                derived = [(100.0 * n / total_moles) for n in moles]
+        basis = "Mol %" if is_mol_basis else "Wt %"
+        derived = derive_inactive_percentages(names, active_vals, basis)
 
         # Write derived values into inactive column (avoid recursion)
         self.ui.tableWidget.blockSignals(True)
@@ -2052,23 +1705,14 @@ class MainWindow(QMainWindow):
                 val = 0.0
             values.append(val)
 
-        total = sum(values)
-        if total == 0:
+        try:
+            norm_values = normalize_percentages(values)
+        except ValueError:
             QMessageBox.warning(self, "Normalize", "Cannot normalize: total is zero.")
             return
 
         # Block signals to avoid recursion during update
         self.ui.tableWidget.blockSignals(True)
-        norm_values = []
-        # Normalize and round all but the last value
-        for row, val in enumerate(values):
-            if row < total_row - 1:
-                norm_val = round((val / total) * 100, 4)
-                norm_values.append(norm_val)
-            else:
-                # Last value: set to 100 - sum of others, rounded to 4 decimals
-                last_val = round(100.0 - sum(norm_values), 4)
-                norm_values.append(last_val)
         # Set the normalized values in the table
         for row, norm_val in enumerate(norm_values):
             item = self.ui.tableWidget.item(row, active_col)
