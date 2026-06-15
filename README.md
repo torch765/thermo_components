@@ -4,7 +4,7 @@ Thermo Components is a PyQt6 desktop application for calculating thermodynamic p
 
 ## Status
 
-The application works today as a single-user desktop tool. The UI, orchestration, and external integrations are still largely organized around [density.py](density.py), while the first architecture extraction has moved pure calculation rules into `src/thermo_components/domain`.
+The application works today as a single-user desktop tool. Pure rules now live in `src/thermo_components/domain`, and workflow orchestration now lives in `src/thermo_components/application`. The PyQt UI and external integrations are still primarily hosted by [density.py](density.py).
 
 ## Features
 
@@ -64,7 +64,7 @@ thermo_components/
   src/
     thermo_components/
       domain/          # Extracted framework-free business rules
-      application/     # Reserved for Phase 2 use cases
+      application/     # Typed DTOs and workflow use cases
       adapters/        # Reserved for external integrations
       bootstrap/       # Reserved for dependency wiring
   tests/               # Characterization tests
@@ -80,7 +80,7 @@ The target design is a practical hexagonal architecture:
 - Adapters will isolate PyQt, `thermo`, SQLite, Excel, and packaging concerns.
 - The current UI should remain functional throughout the migration; this is an incremental refactor, not a rewrite branch.
 
-Phase 1 is complete. Composition, reference conditions, flow conversion, LHV, route selection, warnings, and density-result interpretation now live in the domain package. Phase 2 will introduce application use cases and typed workflow DTOs.
+Phases 1 and 2 are complete. The domain package owns pure rules, while application use cases now coordinate property calculation, flow conversion, composition handling, and report projection. Phase 3 will isolate `thermo`, SQLite, reporting, and resource access behind formal ports and adapters.
 
 ## Development Notes
 

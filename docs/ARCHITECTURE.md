@@ -14,10 +14,10 @@ The objective is not "DDD for its own sake." The objective is to isolate the eng
 
 ## Current State
 
-Phase 1 has extracted the framework-free rules into `src/thermo_components/domain`. The following responsibilities still live in [density.py](../density.py):
+Phases 1 and 2 have extracted framework-free rules and application workflows. The following responsibilities still live in [density.py](../density.py):
 
 - `thermo` library orchestration
-- thread worker setup
+- Qt thread and signal setup
 - PyQt widget state and rendering
 - Excel export
 - resource lookup and startup
@@ -30,6 +30,16 @@ The extracted domain modules currently own:
 - LHV mixture and display rules
 - thermodynamic route and warning policies
 - density-result interpretation
+
+The application layer currently owns:
+
+- typed calculation request and response DTOs
+- selected, normal, and standard property calculation orchestration
+- flow conversion workflow
+- composition normalization and inactive-basis derivation workflows
+- report result and warning projection
+
+`CalculatePropertiesUseCase` currently depends on a local calculator protocol. Phase 3 will move that contract into a formal port and place the existing `MixtureCalculator` implementation behind an adapter.
 
 The remaining monolith still creates predictable problems:
 
@@ -254,7 +264,10 @@ The current module should be decomposed as follows:
 | Reference conditions | Extracted | `domain/conditions.py` |
 | Water route and warning policy | Extracted | `domain/thermo_routes.py`, `domain/warnings.py` |
 | Density result interpretation | Extracted | `domain/results.py` |
-| Thread worker orchestration | `CalculationWorker` | `adapters/ui/qt_worker.py` + application use cases |
+| Property calculation orchestration | Extracted | `application/use_cases/calculate_properties.py` |
+| Flow and composition workflows | Extracted | `application/use_cases/convert_flow.py`, `application/use_cases/normalize_composition.py` |
+| Report projection | Extracted | `application/use_cases/prepare_report.py` |
+| Qt thread bridge | `CalculationWorker` | `adapters/ui/qt_worker.py` |
 | `thermo` integration | `MixtureCalculator` | `adapters/thermo/thermo_gateway.py` |
 | Excel export | `MainWindow.export_results_to_excel` | `adapters/reporting/openpyxl_report_exporter.py` |
 | LHV DB loading | `load_lhv_data`, `lhv_data.py` | `adapters/persistence/sqlite_lhv_repository.py` |

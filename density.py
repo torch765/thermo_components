@@ -88,6 +88,21 @@ from thermo_components.domain.warnings import (
     build_thermo_warning_messages,
     phase_indicates_two_phase,
 )
+from thermo_components.application.dto import (
+    DeriveCompositionRequest,
+    FlowConversionRequest,
+    NormalizeCompositionRequest,
+    PropertyCalculationRequest,
+    ReportPreparationRequest,
+    coerce_property_response,
+)
+from thermo_components.application.use_cases import (
+    CalculatePropertiesUseCase,
+    ConvertFlowUseCase,
+    DeriveCompositionUseCase,
+    NormalizeCompositionUseCase,
+    PrepareReportUseCase,
+)
 
 def load_lhv_data(db_path='lhv_data.db'):
     """Loads LHV data from the SQLite database and returns it."""
@@ -135,127 +150,25 @@ def get_excel_number_format(unit: str) -> str:
 
 # Step 1: Worker class for threaded calculation
 class CalculationWorker(QObject):
-    result = pyqtSignal(dict)
+    result = pyqtSignal(object)
     error = pyqtSignal(str)
     finished = pyqtSignal()
 
-    def __init__(self, calculator, lhv_data, comp_names, mol_percents, wt_percents, basis, T_k, pressure_pa, pressure_atm):
+    def __init__(self, use_case, request):
         super().__init__()
-        self.calculator = calculator
-        self.lhv_data = lhv_data
-        self.comp_names = comp_names
-        self.mol_percents = mol_percents
-        self.wt_percents = wt_percents
-        self.basis = basis
-        self.T_k = T_k
-        self.pressure_pa = pressure_pa
-        self.pressure_atm = pressure_atm
+        self.use_case = use_case
+        self.request = request
 
     def run(self):
         try:
-            # --- Convert to mole fractions based on input basis ---
-            if self.basis == "Mol %":
-                active_percentages = self.mol_percents
-                total_percent = sum(active_percentages)
-                if abs(total_percent - 100.0) > 1e-4 or total_percent == 0:
-                    self.error.emit("Error: Invalid Mol % input.")
-                    self.finished.emit()
-                    return
-            else:
-                active_percentages = self.wt_percents
-                total_percent = sum(active_percentages)
-                if abs(total_percent - 100.0) > 1e-4 or total_percent == 0:
-                    self.error.emit("Error: Invalid Wt % input.")
-                    self.finished.emit()
-                    return
-
-            try:
-                mole_fracs_dict = percentages_to_mole_fractions(
-                    self.comp_names,
-                    active_percentages,
-                    self.basis,
-                )
-            except ValueError as exc:
-                self.error.emit(f"Error: {exc}")
-                self.finished.emit()
-                return
-
-            self.calculator.set_components(mole_fracs_dict)
-            thermo_route = select_thermo_route(
-                self.comp_names,
-                self.mol_percents,
-                self.wt_percents,
-                self.basis,
-                self.calculator.eos,
-            )
-
-            # --- Perform Calculations ---
-            mw = self.calculator.calculate_molecular_weight()
-            density_result, phase, error = self.calculator.calculate_density_for_route(
-                self.T_k,
-                self.pressure_pa,
-                thermo_route["route_id"],
-            )
-            density_normal_result, density_normal_phase, density_normal_error = self.calculator.calculate_density_for_route(
-                celsius_to_kelvin(NORMAL_T_C),
-                atm_to_pa(NORMAL_P_ATM),
-                thermo_route["route_id"],
-            )
-            density_standard_result, density_standard_phase, density_standard_error = self.calculator.calculate_density_for_route(
-                celsius_to_kelvin(STANDARD_T_C),
-                atm_to_pa(STANDARD_P_ATM),
-                thermo_route["route_id"],
-            )
-            bubble_point, bp_error = self.calculator.calculate_bubble_point_for_route(
-                self.pressure_pa,
-                thermo_route["route_id"],
-            )
-            mixture_lhv, missing_lhv = self.calculator.calculate_lhv(self.lhv_data)
-
-            result_data = {
-                'mw': mw,
-                'comp_names': list(self.comp_names),
-                'mol_percents': list(self.mol_percents),
-                'wt_percents': list(self.wt_percents),
-                'thermo_route': thermo_route["route_id"],
-                'model_display': thermo_route["model_display"],
-                'density_result': density_result,
-                'phase': phase,
-                'density_error': error,
-                'density_actual_kg_m3': extract_scalar_density_value(density_result, phase, error),
-                'density_normal_result': density_normal_result,
-                'density_normal_phase': density_normal_phase,
-                'density_normal_error': density_normal_error,
-                'density_normal_kg_m3': extract_scalar_density_value(
-                    density_normal_result, density_normal_phase, density_normal_error
-                ),
-                'density_standard_result': density_standard_result,
-                'density_standard_phase': density_standard_phase,
-                'density_standard_error': density_standard_error,
-                'density_standard_kg_m3': extract_scalar_density_value(
-                    density_standard_result, density_standard_phase, density_standard_error
-                ),
-                'bubble_point': bubble_point,
-                'bp_error': bp_error,
-                'mixture_lhv': mixture_lhv,
-                'missing_lhv': missing_lhv,
-                'basis': self.basis,
-                'eos': self.calculator.eos,
-                'pressure_atm': self.pressure_atm,
-            }
-            result_data['warnings'] = build_thermo_warning_messages(
-                self.comp_names,
-                self.mol_percents,
-                self.wt_percents,
-                self.basis,
-                thermo_route["route_id"],
-                result_data,
-            )
-            self.result.emit(result_data)
+            self.result.emit(self.use_case.execute(self.request))
+        except ValueError as exc:
+            self.error.emit(f"Error: {exc}")
         except Exception as e:
             import traceback
             self.error.emit(f"Worker Exception: {e}\n{traceback.format_exc()}")
-        self.finished.emit()
+        finally:
+            self.finished.emit()
 
 # --- MixtureCalculator Class (do not change this code) ---
 class MixtureCalculator:
@@ -544,6 +457,14 @@ class MainWindow(QMainWindow):
         self.lhv_database = lhv_data
         self.lhv_data_loaded = bool(self.lhv_database)
         self.calculator = MixtureCalculator()
+        self.calculate_properties_use_case = CalculatePropertiesUseCase(
+            self.calculator,
+            self.lhv_database,
+        )
+        self.convert_flow_use_case = ConvertFlowUseCase()
+        self.derive_composition_use_case = DeriveCompositionUseCase()
+        self.normalize_composition_use_case = NormalizeCompositionUseCase()
+        self.prepare_report_use_case = PrepareReportUseCase()
         self.last_result_data = None
         self.density_actual_kg_m3 = None
         self.density_normal_kg_m3 = None
@@ -610,7 +531,13 @@ class MainWindow(QMainWindow):
             active_vals.append(self._parse_float_or_zero(active_item.text() if active_item else ""))
 
         basis = "Mol %" if is_mol_basis else "Wt %"
-        derived = derive_inactive_percentages(names, active_vals, basis)
+        derived = self.derive_composition_use_case.execute(
+            DeriveCompositionRequest(
+                component_names=tuple(names),
+                active_percentages=tuple(active_vals),
+                basis=basis,
+            )
+        ).percentages
 
         # Write derived values into inactive column (avoid recursion)
         self.ui.tableWidget.blockSignals(True)
@@ -753,12 +680,17 @@ class MainWindow(QMainWindow):
 
     def get_current_conditions(self):
         """Return the currently active calculation conditions for reporting."""
-        basis = self.last_result_data.get("basis") if self.last_result_data else (
-            "Mol %" if self.ui.radioButton_mol_percent.isChecked() else "Wt %"
-        )
-        model_display = self.last_result_data.get("model_display") if self.last_result_data else (
-            self.ui.comboBox_select_EOS.currentText()
-        )
+        if self.last_result_data:
+            response = coerce_property_response(self.last_result_data)
+            basis = response.basis
+            model_display = response.model_display
+        else:
+            basis = (
+                "Mol %"
+                if self.ui.radioButton_mol_percent.isChecked()
+                else "Wt %"
+            )
+            model_display = self.ui.comboBox_select_EOS.currentText()
         return [
             ("Basis", basis),
             ("Temperature", self.ui.comboBox_select_temperature.currentText()),
@@ -792,118 +724,25 @@ class MainWindow(QMainWindow):
 
     def build_report_warning_rows(self, result_data):
         """Build structured warning rows for the export report."""
-        warning_rows = []
-
-        for warning_message in result_data.get("warnings") or []:
-            warning_rows.append({
-                "Warning Type": "Thermo",
-                "Details": warning_message,
-            })
-
-        missing_lhv = result_data.get("missing_lhv") or []
-        if missing_lhv:
-            warning_rows.append({
-                "Warning Type": "LHV",
-                "Details": f"LHV Warning: No data for: {', '.join(missing_lhv)}",
-            })
-
-        return warning_rows
+        response = coerce_property_response(result_data)
+        projection = self.prepare_report_use_case.execute(
+            ReportPreparationRequest(
+                calculation=response,
+                lhv_data_available=self.lhv_data_loaded,
+            )
+        )
+        return [row.to_dict() for row in projection.warning_rows]
 
     def build_results_rows(self, result_data):
         """Build structured result rows for report export without scraping the UI."""
-        rows = []
-
-        def add_row(property_name, value, unit="", notes=""):
-            rows.append({
-                "Property": property_name,
-                "Value": value,
-                "Unit": unit,
-                "Notes": notes,
-            })
-
-        add_row("Average molecular weight", result_data.get("mw"), "g/mol")
-
-        phase = result_data.get("phase")
-        density_result = result_data.get("density_result")
-        density_error = result_data.get("density_error")
-        if phase:
-            add_row("Phase @ selected conditions", phase)
-        else:
-            add_row("Phase @ selected conditions", "Could not determine", notes=density_error or "")
-
-        if density_error:
-            add_row("Density @ selected conditions", "N.A.", "kg/m³", density_error)
-        elif phase == "Two-Phase" and isinstance(density_result, tuple) and len(density_result) == 2:
-            density_liq, density_gas = density_result
-            add_row(
-                "Density @ selected conditions (Liq)",
-                density_liq if density_liq is not None else "N.A.",
-                "kg/m³",
+        response = coerce_property_response(result_data)
+        projection = self.prepare_report_use_case.execute(
+            ReportPreparationRequest(
+                calculation=response,
+                lhv_data_available=self.lhv_data_loaded,
             )
-            add_row(
-                "Density @ selected conditions (Vap)",
-                density_gas if density_gas is not None else "N.A.",
-                "kg/m³",
-            )
-        elif density_result is not None:
-            add_row("Density @ selected conditions", density_result, "kg/m³")
-        else:
-            add_row("Density @ selected conditions", "N.A.", "kg/m³")
-
-        def add_reference_density_row(property_name, density_value, phase_value, error_value):
-            add_row(
-                property_name,
-                density_value if density_value is not None else "N.A.",
-                "kg/m³",
-                build_density_note(phase_value, error_value),
-            )
-
-        add_reference_density_row(
-            "Density @ normal conditions",
-            result_data.get("density_normal_kg_m3"),
-            result_data.get("density_normal_phase"),
-            result_data.get("density_normal_error"),
         )
-        add_reference_density_row(
-            "Density @ standard conditions",
-            result_data.get("density_standard_kg_m3"),
-            result_data.get("density_standard_phase"),
-            result_data.get("density_standard_error"),
-        )
-
-        pressure_atm = result_data.get("pressure_atm")
-        bubble_point_label = f"Bubble point @ {pressure_atm:g} atm" if pressure_atm is not None else "Bubble point"
-        bubble_point = result_data.get("bubble_point")
-        bp_error = result_data.get("bp_error")
-        bubble_point_note = "IAPWS-95 saturation temperature for pure water." if result_data.get("thermo_route") == PURE_WATER_ROUTE else ""
-        if bp_error:
-            add_row(bubble_point_label, "N/A", "°C", bp_error)
-        elif bubble_point is not None:
-            add_row(bubble_point_label, bubble_point, "°C", bubble_point_note)
-        else:
-            add_row(bubble_point_label, "Calculation Failed", "°C", bubble_point_note)
-
-        if self.lhv_data_loaded:
-            lhv_display_values = build_lhv_display_values(result_data.get("mixture_lhv", 0.0), result_data.get("mw", 0.0))
-            add_row("Mixture LHV", lhv_display_values["volumetric"]["MJ/Nm³"], "MJ/Nm³", "Base value")
-            for unit in ["kcal/Nm³", "MMkcal/Nm³", "GJ/Nm³", "MMBtu/Nm³"]:
-                add_row("Mixture LHV", lhv_display_values["volumetric"][unit], unit)
-
-            mass_note = "Derived from mixture MW and 22.414 Nm³/kmol at 0 °C and 1 atm."
-            for index, unit in enumerate([
-                "MJ/kg", "MJ/t", "GJ/kg", "GJ/t", "kcal/kg", "kcal/t",
-                "MMkcal/kg", "MMkcal/t", "MMBtu/kg", "MMBtu/t"
-            ]):
-                add_row(
-                    "Mixture LHV (Mass basis)",
-                    lhv_display_values["mass_basis"][unit],
-                    unit,
-                    mass_note if index == 0 else "",
-                )
-        else:
-            add_row("LHV data", "N/A", "", "LHV database not loaded.")
-
-        return rows
+        return [row.to_dict() for row in projection.result_rows]
 
     def export_results_to_excel(self):
         """Export the latest calculation results to a formatted Excel workbook."""
@@ -1102,33 +941,21 @@ class MainWindow(QMainWindow):
             return
 
         input_text = self.ui.lineEdit_enter_flow.text()
-        if not input_text.strip():
-            self.ui.lineEdit_result.clear()
-            return
-
         try:
-            value = parse_flow_input(input_text)
-        except ValueError:
-            self.ui.lineEdit_result.setText("Invalid input")
-            return
-
-        if value is None:
-            self.ui.lineEdit_result.clear()
-            return
-
-        try:
-            converted_value = convert_flow(
-                value,
-                from_unit,
-                to_unit,
-                density_normal_kg_m3=self.density_normal_kg_m3,
-                density_standard_kg_m3=self.density_standard_kg_m3,
+            response = self.convert_flow_use_case.execute(
+                FlowConversionRequest(
+                    input_text=input_text,
+                    from_unit=from_unit,
+                    to_unit=to_unit,
+                    normal_density_kg_m3=self.density_normal_kg_m3,
+                    standard_density_kg_m3=self.density_standard_kg_m3,
+                )
             )
         except ValueError as exc:
             self.ui.lineEdit_result.setText(str(exc))
             return
 
-        self.ui.lineEdit_result.setText(format_flow_value(converted_value))
+        self.ui.lineEdit_result.setText(response.display_value)
 
     def populate_comboboxes(self):
         """Populate the ComboBox widgets with options."""
@@ -1546,17 +1373,19 @@ class MainWindow(QMainWindow):
         self.ui.go_button.setEnabled(False)
         if hasattr(self.ui, "printResultsButton"):
             self.ui.printResultsButton.setEnabled(False)
+        calculation_request = PropertyCalculationRequest.from_sequences(
+            component_names=comp_names,
+            mole_percents=mol_percents,
+            weight_percents=wt_percents,
+            basis=basis,
+            temperature_k=T_k,
+            pressure_pa=pressure_pa,
+            pressure_atm=pressure_atm,
+        )
         self.worker_thread = QThread()
         self.worker = CalculationWorker(
-            calculator=self.calculator,
-            lhv_data=self.lhv_database,
-            comp_names=comp_names,
-            mol_percents=mol_percents,
-            wt_percents=wt_percents,
-            basis=basis,
-            T_k=T_k,
-            pressure_pa=pressure_pa,
-            pressure_atm=pressure_atm
+            use_case=self.calculate_properties_use_case,
+            request=calculation_request,
         )
         self.worker.moveToThread(self.worker_thread)
         self.worker.result.connect(self.on_calculation_result)
@@ -1571,7 +1400,9 @@ class MainWindow(QMainWindow):
 
     def on_calculation_result(self, result_data):
         # Update the UI with calculation results (runs in main thread)
-        self.last_result_data = dict(result_data)
+        response = coerce_property_response(result_data)
+        self.last_result_data = response
+        result_data = response.to_legacy_dict()
         self.density_actual_kg_m3 = result_data.get("density_actual_kg_m3")
         self.density_normal_kg_m3 = result_data.get("density_normal_kg_m3")
         self.density_standard_kg_m3 = result_data.get("density_standard_kg_m3")
@@ -1706,10 +1537,13 @@ class MainWindow(QMainWindow):
             values.append(val)
 
         try:
-            norm_values = normalize_percentages(values)
+            response = self.normalize_composition_use_case.execute(
+                NormalizeCompositionRequest(percentages=tuple(values))
+            )
         except ValueError:
             QMessageBox.warning(self, "Normalize", "Cannot normalize: total is zero.")
             return
+        norm_values = response.percentages
 
         # Block signals to avoid recursion during update
         self.ui.tableWidget.blockSignals(True)

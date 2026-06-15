@@ -16,7 +16,7 @@ This roadmap is designed for incremental execution. The application must remain 
 
 ## Phased Plan
 
-Current status: Phases 0 and 1 are complete. Phase 2 is the next implementation phase.
+Current status: Phases 0, 1, and 2 are complete. Phase 3 is the next implementation phase.
 
 ### Phase 0: Stabilize and Characterize
 
@@ -54,6 +54,8 @@ Exit criteria:
 - Existing GUI behavior is unchanged.
 
 ### Phase 2: Introduce Application Use Cases
+
+Status: Complete as of 2026-06-14.
 
 Deliverables:
 

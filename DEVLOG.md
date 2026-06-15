@@ -11,6 +11,10 @@
 - Completed refactor Phase 1 by extracting framework-free domain modules for composition, reference conditions, flow conversion, LHV, thermo routes, warnings, and density-result interpretation.
 - Updated `density.py` to delegate pure rules to the domain package while retaining its existing public names and UI behavior.
 - Expanded the test suite to cover direct domain APIs and enforce the domain dependency boundary.
+- Completed refactor Phase 2 by adding typed application DTOs and use cases for property calculation, flow conversion, composition handling, and report projection.
+- Reduced `CalculationWorker` to a Qt execution bridge and changed it to emit typed calculation responses.
+- Updated `MainWindow` handlers to delegate workflow decisions to the application layer while preserving existing rendering and export behavior.
+- Expanded architecture checks to keep both domain and application layers free from framework and infrastructure imports.
 
 ### 2026-03-20
 - Added an automatic pure-water model override so effectively pure water now uses `IAPWS-95` instead of the default `PRMIX` route.

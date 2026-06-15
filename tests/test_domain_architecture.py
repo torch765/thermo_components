@@ -1,6 +1,8 @@
 import ast
 from pathlib import Path
 
+import pytest
+
 
 FORBIDDEN_IMPORT_ROOTS = {
     "PyQt6",
@@ -9,11 +11,8 @@ FORBIDDEN_IMPORT_ROOTS = {
     "sqlite3",
     "thermo",
 }
-DOMAIN_ROOT = (
-    Path(__file__).resolve().parents[1]
-    / "src"
-    / "thermo_components"
-    / "domain"
+PACKAGE_ROOT = (
+    Path(__file__).resolve().parents[1] / "src" / "thermo_components"
 )
 
 
@@ -30,10 +29,14 @@ def imported_root_names(path: Path) -> set[str]:
     return roots
 
 
-def test_domain_layer_has_no_framework_or_infrastructure_imports():
+@pytest.mark.parametrize("layer_name", ["domain", "application"])
+def test_inner_layers_have_no_framework_or_infrastructure_imports(layer_name):
+    layer_root = PACKAGE_ROOT / layer_name
     violations = {
-        path.name: sorted(imported_root_names(path) & FORBIDDEN_IMPORT_ROOTS)
-        for path in DOMAIN_ROOT.glob("*.py")
+        str(path.relative_to(layer_root)): sorted(
+            imported_root_names(path) & FORBIDDEN_IMPORT_ROOTS
+        )
+        for path in layer_root.rglob("*.py")
         if imported_root_names(path) & FORBIDDEN_IMPORT_ROOTS
     }
     assert violations == {}

@@ -56,7 +56,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/REFACTOR_ROADMAP.md](
 ## Testing Expectations
 
 - Pure domain logic should have unit tests.
-- The domain import-boundary test must remain green.
+- The domain and application import-boundary tests must remain green.
 - Adapter behavior should be covered with focused integration tests where needed.
 - Qt tests should stay narrow and verify controller/presenter wiring rather than widget cosmetics.
 - High-risk areas include basis conversion, density reference handling, warning generation, flow conversion, and report row assembly.
