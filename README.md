@@ -4,7 +4,7 @@ Thermo Components is a PyQt6 desktop application for calculating thermodynamic p
 
 ## Status
 
-The application works today as a single-user desktop tool. Pure rules now live in `src/thermo_components/domain`, and workflow orchestration now lives in `src/thermo_components/application`. The PyQt UI and external integrations are still primarily hosted by [density.py](density.py).
+The application works today as a single-user desktop tool. Pure rules live in `src/thermo_components/domain`, workflow orchestration and ports live in `src/thermo_components/application`, and the thermodynamics library integration lives in `src/thermo_components/adapters/thermo`. The PyQt UI, persistence, reporting, and startup concerns are still primarily hosted by [density.py](density.py).
 
 ## Features
 
@@ -65,7 +65,7 @@ thermo_components/
     thermo_components/
       domain/          # Extracted framework-free business rules
       application/     # Typed DTOs and workflow use cases
-      adapters/        # Reserved for external integrations
+      adapters/        # External integrations, including thermo
       bootstrap/       # Reserved for dependency wiring
   tests/               # Characterization tests
   docs/               # Architecture and roadmap documents
@@ -80,7 +80,7 @@ The target design is a practical hexagonal architecture:
 - Adapters will isolate PyQt, `thermo`, SQLite, Excel, and packaging concerns.
 - The current UI should remain functional throughout the migration; this is an incremental refactor, not a rewrite branch.
 
-Phases 1 and 2 are complete. The domain package owns pure rules, while application use cases now coordinate property calculation, flow conversion, composition handling, and report projection. Phase 3 will isolate `thermo`, SQLite, reporting, and resource access behind formal ports and adapters.
+Phases 1 and 2 are complete, and Phase 3 is in progress. The domain package owns pure rules, application use cases coordinate workflows through formal ports, and the `thermo`/`chemicals` integration is isolated in a thermodynamics adapter. SQLite, reporting, and resource access are the remaining Phase 3 boundaries.
 
 ## Development Notes
 

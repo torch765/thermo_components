@@ -3,7 +3,6 @@ import sqlite3
 import os # To check if DB file exists
 from datetime import datetime
 
-from chemicals import iapws as chemicals_iapws
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QComboBox, QListWidget,
     QPushButton, QLabel, QGridLayout, QVBoxLayout, QTableWidget,
@@ -15,18 +14,11 @@ from PyQt6.QtGui import QPalette, QColor
 # --- Import the generated UI class ---
 from gui import Ui_Dialog
 
-# THERMO FLASH INTERFACE IMPORTS
-# NOTE: Make sure PRMIX is imported if it's the only option for now
-# If you add SRKMIX later, you'll need: from thermo.eos_mix import PRMIX, SRKMIX
-from thermo import ChemicalConstantsPackage, CEOSGas, CEOSLiquid, FlashVL, PRMIX, FlashPureVLS, IAPWS95
-# from thermo.eos_mix import PRMIX # Explicit import if needed
-
 from thermo_components.domain.composition import (
     MOLECULAR_WEIGHTS,
     PURE_WATER_WARNING_FRACTION,
     WATER_COMPONENT_ALIASES,
     active_basis_amount_rows as _active_basis_amount_rows,
-    calculate_mixture_molecular_weight,
     derive_inactive_percentages,
     has_water_component,
     is_effectively_pure_water,
@@ -68,26 +60,13 @@ from thermo_components.domain.lhv import (
     MJ_PER_MMBTU,
     NORMAL_MOLAR_VOLUME_NM3_PER_KMOL,
     build_lhv_display_values,
-    calculate_mixture_lhv,
     format_lhv_display_value,
 )
 from thermo_components.domain.results import (
     build_density_note,
     extract_scalar_density_value,
 )
-from thermo_components.domain.thermo_routes import (
-    IAPWS95_MODEL_DISPLAY,
-    IAPWS95_TWO_PHASE_REL_TOL,
-    PRMIX_DEFAULT_ROUTE,
-    PURE_WATER_ROUTE,
-    select_thermo_route,
-)
-from thermo_components.domain.warnings import (
-    PRMIX_TWO_PHASE_WATER_WARNING,
-    PRMIX_WATER_WARNING,
-    build_thermo_warning_messages,
-    phase_indicates_two_phase,
-)
+from thermo_components.adapters.thermo import ThermoGateway
 from thermo_components.application.dto import (
     DeriveCompositionRequest,
     FlowConversionRequest,
@@ -103,6 +82,8 @@ from thermo_components.application.use_cases import (
     NormalizeCompositionUseCase,
     PrepareReportUseCase,
 )
+
+MixtureCalculator = ThermoGateway
 
 def load_lhv_data(db_path='lhv_data.db'):
     """Loads LHV data from the SQLite database and returns it."""
@@ -169,271 +150,6 @@ class CalculationWorker(QObject):
             self.error.emit(f"Worker Exception: {e}\n{traceback.format_exc()}")
         finally:
             self.finished.emit()
-
-# --- MixtureCalculator Class (do not change this code) ---
-class MixtureCalculator:
-    """Handles the thermodynamic calculations, decoupled from the UI."""
-    def __init__(self, components=None, eos='PRMIX'):
-        self.components = components if components is not None else {}
-        self.eos = eos
-        self.constants = None
-        self.properties = None
-
-    def set_components(self, components):
-        self.components = components
-        self.constants = None # Reset cached constants when components change
-        self.properties = None # Reset cached properties
-
-    def set_eos(self, eos):
-        # Add logic here if you support more EOS types later
-        self.eos = eos
-        print(f"EOS set to: {self.eos}") # Debug print
-
-    def calculate_molecular_weight(self):
-        return calculate_mixture_molecular_weight(self.components)
-
-    def calculate_density_for_route(self, temperature_k, pressure_pa, route_id):
-        """Dispatch density calculation to the selected thermo route."""
-        if route_id == PURE_WATER_ROUTE:
-            return self.calculate_pure_water_density_iapws95(temperature_k, pressure_pa)
-        return self.calculate_density(temperature_k, pressure_pa)
-
-    def calculate_bubble_point_for_route(self, pressure_pa, route_id):
-        """Dispatch bubble-point/saturation calculation to the selected thermo route."""
-        if route_id == PURE_WATER_ROUTE:
-            return self.calculate_pure_water_bubble_point_iapws95(pressure_pa)
-        return self.calculate_bubble_point(pressure_pa)
-
-    def calculate_pure_water_density_iapws95(self, temperature_k, pressure_pa):
-        """Calculate pure-water density using the local IAPWS-95 implementation."""
-        if temperature_k is None or pressure_pa is None:
-            return None, None, "Missing temperature or pressure."
-        if temperature_k <= 0 or pressure_pa <= 0:
-            return None, None, "Temperature and pressure must be positive."
-
-        try:
-            phase_label = None
-            critical_t = IAPWS95.Tc
-            critical_p = IAPWS95.Pc
-
-            if 235.0 <= temperature_k < critical_t and pressure_pa < critical_p:
-                psat = chemicals_iapws.iapws95_Psat(temperature_k)
-                relative_difference = abs(pressure_pa - psat) / max(psat, 1.0)
-                if relative_difference <= IAPWS95_TWO_PHASE_REL_TOL:
-                    density_liq = chemicals_iapws.iapws95_rhol_sat(temperature_k)
-                    density_gas = chemicals_iapws.iapws95_rhog_sat(temperature_k)
-                    return (density_liq, density_gas), "Two-Phase", None
-                phase_label = "Liquid" if pressure_pa > psat else "Vapor"
-            elif temperature_k >= critical_t and pressure_pa >= critical_p:
-                phase_label = "Supercritical"
-            elif temperature_k >= critical_t:
-                phase_label = "Vapor"
-            elif pressure_pa >= critical_p:
-                phase_label = "Liquid"
-
-            water_state = IAPWS95(T=temperature_k, P=pressure_pa, zs=[1.0])
-            density_mass = water_state.rho_mass()
-
-            if phase_label is None:
-                phase_label = "Liquid" if density_mass >= 200.0 else "Vapor"
-
-            return density_mass, phase_label, None
-        except Exception as exc:
-            return None, None, f"IAPWS-95 pure-water density failed: {exc}"
-
-    def calculate_pure_water_bubble_point_iapws95(self, pressure_pa):
-        """Calculate pure-water saturation temperature using IAPWS-95."""
-        if pressure_pa is None or pressure_pa <= 0:
-            return None, "Pressure must be positive."
-
-        try:
-            saturation_temperature_k = chemicals_iapws.iapws95_Tsat(pressure_pa)
-        except Exception as exc:
-            return None, f"IAPWS-95 saturation calculation failed: {exc}"
-
-        return saturation_temperature_k - 273.15, None
-
-
-    def calculate_density(self, temperature_k, pressure_pa):
-        """Calculates density, accounting for phase (liquid/vapor/two-phase).
-           (Reverted to original phase iteration logic)"""
-        if not self.components:
-            # Return format matches original expectation: density, phase_str, error_str
-            return None, None, "No components selected."
-
-        total = sum(self.components.values())
-        if total == 0:
-            return None, None, "Total fraction is zero."
-
-        zs = [x / total for x in self.components.values()]
-        comp_list = list(self.components.keys())
-        print(f"Calculating density (original logic) for: {comp_list} at T={temperature_k:.2f} K, P={pressure_pa:.1f} Pa with EOS={self.eos}")
-
-        try:
-            if self.constants is None or self.properties is None:
-                print("Fetching chemical constants...")
-                self.constants, self.properties = ChemicalConstantsPackage.from_IDs(comp_list)
-                print("Constants fetched.")
-
-            # Basic check for constants needed by EOS
-            if None in self.constants.Tcs or None in self.constants.Pcs or None in self.constants.omegas:
-                 missing_data_comps = [comp_list[i] for i, tc in enumerate(self.constants.Tcs) if tc is None]
-                 return None, None, f"Missing critical properties for: {', '.join(missing_data_comps)}"
-
-            eos_kwargs = {
-                'Pcs': self.constants.Pcs,
-                'Tcs': self.constants.Tcs,
-                'omegas': self.constants.omegas,
-            }
-
-            eos_class = PRMIX # Assuming PRMIX only for now
-            hcap_gases = self.properties.HeatCapacityGases if hasattr(self.properties, 'HeatCapacityGases') else None
-
-            if len(comp_list) == 1:
-                 # Original code used FlashPureVLS here, keep that part
-                 gas = CEOSGas(eos_class, eos_kwargs=eos_kwargs, HeatCapacityGases=hcap_gases)
-                 liquid = CEOSLiquid(eos_class, eos_kwargs=eos_kwargs, HeatCapacityGases=hcap_gases)
-                 flasher = FlashPureVLS(self.constants, self.properties, gas=gas, liquids=[liquid], solids=[])
-            else:
-                 gas = CEOSGas(eos_class, HeatCapacityGases=hcap_gases, eos_kwargs=eos_kwargs, zs=zs)
-                 liquid = CEOSLiquid(eos_class, HeatCapacityGases=hcap_gases, eos_kwargs=eos_kwargs, zs=zs)
-                 flasher = FlashVL(self.constants, self.properties, liquid=liquid, gas=gas)
-
-            print(f"Performing flash T={temperature_k}, P={pressure_pa}, zs={zs}")
-            result = flasher.flash(T=temperature_k, P=pressure_pa, zs=zs)
-            # Debug: Print result attributes relevant to original logic
-            print(f"Flash result: Phases present = {len(result.phases)}, PurePhase='{getattr(result, 'phase', 'N/A')}'")
-            if hasattr(result, 'phases'):
-                 for i, p in enumerate(result.phases):
-                      print(f"  Phase {i}: Liquid={p.is_liquid}, Gas={p.is_gas}, V={p.V()}")
-
-            # Calculate Overall Molecular Weight (convert g/mol to kg/mol) - used by original logic
-            MWs = self.constants.MWs if self.constants is not None else []
-            if not MWs or None in MWs:
-                return None, None, "Could not retrieve molecular weight for all components."
-             # Use overall mole fractions (zs) for average MW calculation
-            MW = sum([zi * Mwi for zi, Mwi in zip(zs, MWs)]) / 1000.0
-            if MW <= 0:
-                 return None, None, "Calculated average molecular weight is zero or negative."
-
-
-            density_liq = None
-            density_gas = None
-
-            # --- Original Logic based on iterating result.phases (for mixtures) ---
-            # --- and result.phase (for pure) ---
-            if len(comp_list) == 1 and isinstance(flasher, FlashPureVLS):
-                 # Handle pure component flash results based on 'phase' attribute
-                 pure_phase_attr = getattr(result, 'phase', '').lower()
-                 if pure_phase_attr in ['l', 'liquid']:
-                      if result.liquid0 and result.liquid0.V() is not None and result.liquid0.V() > 0:
-                           density_liq = MW / result.liquid0.V()
-                 elif pure_phase_attr in ['g', 'v', 'gas', 'vapor']:
-                      if result.gas and result.gas.V() is not None and result.gas.V() > 0:
-                           density_gas = MW / result.gas.V()
-                 elif '/' in pure_phase_attr: # Two phase like 'l/g'
-                      if result.liquid0 and result.liquid0.V() is not None and result.liquid0.V() > 0:
-                           density_liq = MW / result.liquid0.V()
-                      if result.gas and result.gas.V() is not None and result.gas.V() > 0:
-                           density_gas = MW / result.gas.V()
-                 else:
-                      # If phase attribute is unexpected, try checking phases list
-                      if hasattr(result, 'phases'):
-                           for phase in result.phases:
-                                if phase.is_liquid and phase.V() is not None and phase.V() > 0:
-                                    density_liq = MW / phase.V()
-                                elif phase.is_gas and phase.V() is not None and phase.V() > 0:
-                                    density_gas = MW / phase.V()
-                      else:
-                          return None, None, f"Unexpected pure phase result: {pure_phase_attr}"
-
-
-            elif hasattr(result, 'phases'): # Mixture case: Iterate phases list
-                 for phase in result.phases:
-                      phase_vol = phase.V()
-                      if phase_vol is not None and phase_vol > 0:
-                           # Original logic used overall MW for phase density estimate
-                           if phase.is_liquid:
-                                density_liq = MW / phase_vol
-                           elif phase.is_gas:
-                                density_gas = MW / phase_vol
-                      else:
-                           print(f"Warning: Phase volume is None or zero for phase type (Liq={phase.is_liquid}, Gas={phase.is_gas})")
-
-            else:
-                 return None, None, "Flash result object did not contain expected 'phases' attribute."
-
-            # --- Determine final return based on calculated densities ---
-            if density_liq is not None and density_gas is not None:
-                print(f"Determined Phase: Two-Phase, DensLiq={density_liq:.3f}, DensGas={density_gas:.3f}")
-                return (density_liq, density_gas), "Two-Phase", None
-            elif density_liq is not None:
-                print(f"Determined Phase: Liquid, DensLiq={density_liq:.3f}")
-                return density_liq, "Liquid", None
-            elif density_gas is not None:
-                print(f"Determined Phase: Vapor, DensGas={density_gas:.3f}")
-                return density_gas, "Vapor", None
-            else:
-                # If no densities could be calculated
-                print(f"Warning: Could not calculate density for any phase found.")
-                # Try to determine phase based on VF if available, otherwise return Unknown
-                phase_guess = "Unknown"
-                if hasattr(result, 'VF'):
-                     if result.VF == 0: phase_guess = "Liquid (calc failed)"
-                     elif result.VF == 1: phase_guess = "Vapor (calc failed)"
-                     elif 0 < result.VF < 1: phase_guess = "Two-Phase (calc failed)"
-                return None, phase_guess, "Failed to calculate density values."
-
-        except Exception as e:
-            import traceback
-            print(f"Error during density calculation: {e}\n{traceback.format_exc()}")
-            # Return format matches original expectation
-            return None, None, str(e)
-    
-    def calculate_bubble_point(self, pressure_pa):
-        """Calculates the bubble point temperature."""
-        if not self.components: return None, "No components selected."
-        total = sum(self.components.values())
-        if total == 0: return None, "Total fraction is zero."
-
-        zs = [x / total for x in self.components.values()]
-        comp_list = list(self.components.keys())
-        print(f"Calculating bubble point for: {comp_list} at P={pressure_pa:.1f} Pa")
-
-        try:
-            if self.constants is None or self.properties is None:
-                 self.constants, self.properties = ChemicalConstantsPackage.from_IDs(comp_list)
-
-            if None in self.constants.Tcs or None in self.constants.Pcs or None in self.constants.omegas:
-                 missing_data_comps = [comp_list[i] for i, tc in enumerate(self.constants.Tcs) if tc is None]
-                 return None, f"Missing critical properties for: {', '.join(missing_data_comps)}"
-
-            eos_kwargs = {'Pcs': self.constants.Pcs, 'Tcs': self.constants.Tcs, 'omegas': self.constants.omegas,}
-            hcap_gases = self.properties.HeatCapacityGases if hasattr(self.properties, 'HeatCapacityGases') else None
-            eos_class = PRMIX # Assuming PRMIX for now
-
-            if len(comp_list) == 1:
-                gas = CEOSGas(eos_class, eos_kwargs=eos_kwargs, HeatCapacityGases=hcap_gases)
-                liquid = CEOSLiquid(eos_class, eos_kwargs=eos_kwargs, HeatCapacityGases=hcap_gases)
-                flasher = FlashPureVLS(self.constants, self.properties, gas=gas, liquids=[liquid], solids=[])
-            else:
-                gas = CEOSGas(eos_class, HeatCapacityGases=hcap_gases, eos_kwargs=eos_kwargs, zs=zs)
-                liquid = CEOSLiquid(eos_class, HeatCapacityGases=hcap_gases, eos_kwargs=eos_kwargs, zs=zs)
-                flasher = FlashVL(self.constants, self.properties, liquid=liquid, gas=gas)
-
-            result = flasher.flash(P=pressure_pa, VF=0, zs=zs) # VF=0 for bubble point
-            print(f"Bubble point flash result T={result.T}")
-            return result.T - 273.15, None
-
-        except Exception as e:
-             import traceback
-             print(f"Error during bubble point calculation: {e}\n{traceback.format_exc()}")
-             return None, str(e)
-
-    def calculate_lhv(self, lhv_data):
-        """Calculates the LHV of the mixture based on mole fractions (MJ/Nm³)."""
-        return calculate_mixture_lhv(self.components, lhv_data)
-
 
 # --- MainWindow Class (Modified for gui.py) ---
 class MainWindow(QMainWindow):

@@ -14,12 +14,12 @@ The objective is not "DDD for its own sake." The objective is to isolate the eng
 
 ## Current State
 
-Phases 1 and 2 have extracted framework-free rules and application workflows. The following responsibilities still live in [density.py](../density.py):
+Phases 1, 2, and 3A have extracted framework-free rules, application workflows, and the thermodynamics integration. The following responsibilities still live in [density.py](../density.py):
 
-- `thermo` library orchestration
 - Qt thread and signal setup
 - PyQt widget state and rendering
 - Excel export
+- SQLite LHV loading
 - resource lookup and startup
 
 The extracted domain modules currently own:
@@ -39,13 +39,11 @@ The application layer currently owns:
 - composition normalization and inactive-basis derivation workflows
 - report result and warning projection
 
-`CalculatePropertiesUseCase` currently depends on a local calculator protocol. Phase 3 will move that contract into a formal port and place the existing `MixtureCalculator` implementation behind an adapter.
+`CalculatePropertiesUseCase` now depends on the application-owned `ThermoPropertyGateway` port. `ThermoGateway` implements that contract in `adapters/thermo` and isolates all direct `thermo` and `chemicals` imports. `density.py` retains `MixtureCalculator` only as a compatibility alias.
 
 The remaining monolith still creates predictable problems:
 
-- UI code owns business workflows
-- calculation rules are hard to test without the GUI
-- `thermo` implementation details leak everywhere
+- UI code still owns framework coordination and some presentation decisions
 - export and persistence logic are coupled to screen state
 - changing one area raises regression risk in unrelated areas
 
@@ -54,19 +52,16 @@ The remaining monolith still creates predictable problems:
 The target is a pragmatic hexagonal architecture with a lean domain model.
 
 ```text
-UI / CLI / tests
-      |
-      v
-Application Use Cases
-      |
-      v
-Domain Model + Domain Services
-      |
-      v
-Ports
-      |
-      v
-Adapters: thermo, Qt, SQLite, Excel, packaging
+Driving adapters: Qt / CLI / tests
+                 |
+                 v
+        Application Use Cases
+           |             ^
+           v             |
+Domain Model       Application Ports
+                         ^
+                         |
+Driven adapters: thermo / SQLite / Excel / packaging
 ```
 
 Dependency direction is always inward:
@@ -126,9 +121,10 @@ src/thermo_components/
     warnings.py
     thermo_routes.py
     results.py
-    ports.py
   application/
     dto.py
+    ports/
+      thermo.py
     use_cases/
       calculate_properties.py
       convert_flow.py
@@ -172,9 +168,9 @@ Examples:
 
 Use `dataclass` and `Enum` first. Do not introduce richer tactical DDD patterns unless the invariants justify them.
 
-## Domain Ports
+## Application Ports
 
-The domain and application layers should depend on interfaces, not libraries.
+The application layer owns interfaces for the external capabilities required by its use cases. The domain remains independent of both ports and adapters.
 
 ### `ThermoPropertyGateway`
 
@@ -268,7 +264,7 @@ The current module should be decomposed as follows:
 | Flow and composition workflows | Extracted | `application/use_cases/convert_flow.py`, `application/use_cases/normalize_composition.py` |
 | Report projection | Extracted | `application/use_cases/prepare_report.py` |
 | Qt thread bridge | `CalculationWorker` | `adapters/ui/qt_worker.py` |
-| `thermo` integration | `MixtureCalculator` | `adapters/thermo/thermo_gateway.py` |
+| `thermo` integration | Extracted; compatibility alias remains | `application/ports/thermo.py`, `adapters/thermo/thermo_gateway.py` |
 | Excel export | `MainWindow.export_results_to_excel` | `adapters/reporting/openpyxl_report_exporter.py` |
 | LHV DB loading | `load_lhv_data`, `lhv_data.py` | `adapters/persistence/sqlite_lhv_repository.py` |
 | UI state and rendering | `MainWindow` | `adapters/ui/qt_main_window.py`, `adapters/ui/presenters.py` |

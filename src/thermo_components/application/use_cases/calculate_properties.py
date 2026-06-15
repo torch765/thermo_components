@@ -1,13 +1,13 @@
 """Thermodynamic property calculation workflow."""
 
 from collections.abc import Mapping
-from typing import Protocol
 
 from thermo_components.application.dto import (
     DensityCalculationResult,
     PropertyCalculationRequest,
     PropertyCalculationResponse,
 )
+from thermo_components.application.ports import ThermoPropertyGateway
 from thermo_components.domain.composition import (
     CompositionBasis,
     calculate_mixture_molecular_weight,
@@ -22,29 +22,10 @@ from thermo_components.domain.thermo_routes import select_thermo_route
 from thermo_components.domain.warnings import build_thermo_warning_messages
 
 
-class PropertyCalculator(Protocol):
-    eos: str
-
-    def set_components(self, components: Mapping[str, float]) -> None: ...
-
-    def calculate_density_for_route(
-        self,
-        temperature_k: float,
-        pressure_pa: float,
-        route_id: str,
-    ): ...
-
-    def calculate_bubble_point_for_route(
-        self,
-        pressure_pa: float,
-        route_id: str,
-    ): ...
-
-
 class CalculatePropertiesUseCase:
     def __init__(
         self,
-        calculator: PropertyCalculator,
+        calculator: ThermoPropertyGateway,
         lhv_data: Mapping[str, float],
     ):
         self._calculator = calculator

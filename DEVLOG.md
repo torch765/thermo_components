@@ -1,5 +1,11 @@
 ## DEVLOG
 
+### 2026-06-15
+- Started refactor Phase 3 by adding the application-owned `ThermoPropertyGateway` port.
+- Moved PRMIX and IAPWS95 calculations from `density.py` into `adapters/thermo/thermo_gateway.py`.
+- Kept `MixtureCalculator` as a compatibility alias while removing direct `thermo` and `chemicals` imports from the launcher.
+- Added real adapter smoke tests for methane and pure-water routes and enforced the thermodynamics import boundary.
+
 ### 2026-06-14
 - Added project-level architecture documentation for the planned DDD-inspired, hexagonal refactor.
 - Added a phased refactor roadmap with concrete PR sequencing and extraction order.
