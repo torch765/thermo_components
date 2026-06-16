@@ -5,6 +5,10 @@ from .input_collection import (
     collect_property_calculation_request,
 )
 from .composition_table import (
+    ComponentAddResult,
+    ComponentAddStatus,
+    ComponentRemoveResult,
+    ComponentRemoveStatus,
     CompositionTableController,
     CompositionTotalState,
 )
@@ -15,6 +19,10 @@ from .warning_banner import ThermoWarningBannerController
 __all__ = [
     "CalculationInputCollection",
     "CalculationWorker",
+    "ComponentAddResult",
+    "ComponentAddStatus",
+    "ComponentRemoveResult",
+    "ComponentRemoveStatus",
     "CompositionTableController",
     "CompositionTotalState",
     "ThermoWarningBannerController",

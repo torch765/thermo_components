@@ -17,7 +17,7 @@ The objective is not "DDD for its own sake." The objective is to isolate the eng
 Phases 1, 2, and 3 have extracted framework-free rules, application workflows, thermodynamics integration, LHV persistence, resource location, and Excel report export. Phase 4 has started by extracting the Qt worker bridge, calculation input collector, warning-banner controller, composition-table controller, and results-list presenter. The following responsibilities still live in [density.py](../density.py):
 
 - Qt controller logic and thread wiring
-- remaining PyQt widget state and rendering, including composition row add/remove orchestration
+- remaining PyQt widget workflow coordination, including normalization UI feedback
 - report export button coordination and user messaging
 - startup and dependency composition
 
@@ -276,7 +276,7 @@ The current module should be decomposed as follows:
 | Result-list presentation | Extracted | `adapters/ui/presenters.py` |
 | Calculation input collection | Extracted | `adapters/ui/input_collection.py` |
 | Thermo warning banner | Extracted | `adapters/ui/warning_banner.py` |
-| Composition table setup, basis styling, and total validation | Extracted | `adapters/ui/composition_table.py` |
+| Composition table setup, basis styling, total validation, and row/list mutation | Extracted | `adapters/ui/composition_table.py` |
 | Remaining UI state and rendering | `MainWindow` plus extracted UI controllers | `adapters/ui/qt_main_window.py`, additional presenters/controllers |
 | Resource lookup | Extracted; compatibility wrapper remains | `application/ports/resources.py`, `adapters/packaging/resource_locator.py` |
 | Startup composition | `main` | `bootstrap/main.py` |

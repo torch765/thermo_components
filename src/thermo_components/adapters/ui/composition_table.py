@@ -1,9 +1,10 @@
 """Qt controller for composition-table rendering and total validation."""
 
 from dataclasses import dataclass
+from enum import Enum
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QColor
+from PyQt6.QtGui import QColor, QPalette
 from PyQt6.QtWidgets import QHeaderView, QTableWidgetItem
 
 
@@ -17,6 +18,29 @@ class CompositionTotalState:
     total_percent: float
     valid_input: bool
     is_total_ok: bool
+
+
+class ComponentAddStatus(str, Enum):
+    ADDED = "added"
+    DUPLICATE = "duplicate"
+    EMPTY_SELECTION = "empty_selection"
+
+
+class ComponentRemoveStatus(str, Enum):
+    REMOVED = "removed"
+    NO_COMPONENTS = "no_components"
+
+
+@dataclass(frozen=True)
+class ComponentAddResult:
+    status: ComponentAddStatus
+    component_name: str = ""
+
+
+@dataclass(frozen=True)
+class ComponentRemoveResult:
+    status: ComponentRemoveStatus
+    component_names: tuple[str, ...] = ()
 
 
 class CompositionTableController:
@@ -171,3 +195,115 @@ class CompositionTableController:
             valid_input=valid_input,
             is_total_ok=is_total_ok,
         )
+
+    def add_selected_component(self) -> ComponentAddResult:
+        """Add the selected component to the list and table widgets."""
+        component_name = self.ui.comboBox_select_components.currentText()
+        if not component_name.strip():
+            return ComponentAddResult(ComponentAddStatus.EMPTY_SELECTION)
+
+        if self.has_component(component_name):
+            self.mark_component_combo_duplicate()
+            return ComponentAddResult(
+                ComponentAddStatus.DUPLICATE,
+                component_name,
+            )
+
+        self.reset_component_combo_palette()
+        self.ui.selected_components_list.addItem(component_name)
+        self.insert_component_row(component_name)
+        return ComponentAddResult(ComponentAddStatus.ADDED, component_name)
+
+    def remove_selected_components(self) -> ComponentRemoveResult:
+        """Remove selected components, or the current/last component fallback."""
+        selected_items = list(self.ui.selected_components_list.selectedItems())
+        removed_component_names: list[str] = []
+
+        if not selected_items:
+            if self.ui.selected_components_list.count() == 0:
+                return ComponentRemoveResult(ComponentRemoveStatus.NO_COMPONENTS)
+
+            current_row = self.ui.selected_components_list.currentRow()
+            if current_row < 0:
+                current_row = self.ui.selected_components_list.count() - 1
+            item_to_remove = self.ui.selected_components_list.takeItem(
+                current_row
+            )
+            if item_to_remove is not None:
+                removed_component_names.append(item_to_remove.text())
+                self.remove_component_from_table(item_to_remove.text())
+        else:
+            for item in selected_items:
+                row = self.ui.selected_components_list.row(item)
+                component_name = item.text()
+                self.ui.selected_components_list.takeItem(row)
+                removed_component_names.append(component_name)
+                self.remove_component_from_table(component_name)
+
+        if self.ui.selected_components_list.count() == 0:
+            self.reset_component_combo_palette()
+
+        return ComponentRemoveResult(
+            ComponentRemoveStatus.REMOVED,
+            tuple(removed_component_names),
+        )
+
+    def clear_component_rows_and_selection(self) -> None:
+        """Remove all component rows while preserving the total row."""
+        self.ui.selected_components_list.clear()
+        while self.ui.tableWidget.rowCount() > 1:
+            self.ui.tableWidget.removeRow(0)
+
+        self.reset_component_combo_palette()
+        self.reset_component_selection()
+
+    def has_component(self, component_name: str) -> bool:
+        current_items = [
+            self.ui.selected_components_list.item(index).text()
+            for index in range(self.ui.selected_components_list.count())
+        ]
+        return component_name in current_items
+
+    def insert_component_row(self, component_name: str) -> None:
+        total_row_index = self.ui.tableWidget.rowCount() - 1
+        self.ui.tableWidget.insertRow(total_row_index)
+
+        name_item = QTableWidgetItem(component_name)
+        name_item.setFlags(name_item.flags() & ~Qt.ItemFlag.ItemIsEditable)
+        self.ui.tableWidget.setItem(
+            total_row_index,
+            COMPONENT_COLUMN,
+            name_item,
+        )
+
+        self.ui.tableWidget.setItem(
+            total_row_index,
+            MOLE_PERCENT_COLUMN,
+            QTableWidgetItem(""),
+        )
+        self.ui.tableWidget.setItem(
+            total_row_index,
+            WEIGHT_PERCENT_COLUMN,
+            QTableWidgetItem(""),
+        )
+
+    def remove_component_from_table(self, component_name: str) -> None:
+        for row_index in range(self.ui.tableWidget.rowCount() - 2, -1, -1):
+            table_item = self.ui.tableWidget.item(row_index, COMPONENT_COLUMN)
+            if table_item and table_item.text() == component_name:
+                self.ui.tableWidget.removeRow(row_index)
+                break
+
+    def mark_component_combo_duplicate(self) -> None:
+        self._set_component_combo_base_color(QColor("red"))
+
+    def reset_component_combo_palette(self) -> None:
+        self._set_component_combo_base_color(QColor("white"))
+
+    def reset_component_selection(self) -> None:
+        self.ui.comboBox_select_components.setCurrentIndex(0)
+
+    def _set_component_combo_base_color(self, color: QColor) -> None:
+        palette = self.ui.comboBox_select_components.palette()
+        palette.setColor(QPalette.ColorRole.Base, color)
+        self.ui.comboBox_select_components.setPalette(palette)

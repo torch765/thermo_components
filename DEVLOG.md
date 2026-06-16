@@ -10,6 +10,7 @@
 - Moved calculation input collection and basic widget parsing into `adapters/ui/input_collection.py`.
 - Moved thermo warning-banner rendering and layout restoration into `adapters/ui/warning_banner.py`.
 - Moved composition-table setup, basis styling, and total validation into `adapters/ui/composition_table.py`.
+- Moved composition row/list add, remove, duplicate, and clear widget mutations into the composition-table UI controller.
 
 ### 2026-06-15
 - Started refactor Phase 3 by adding the application-owned `ThermoPropertyGateway` port.

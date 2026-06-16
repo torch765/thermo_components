@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (
     QTableWidgetItem, QMessageBox, QHBoxLayout, QButtonGroup, QRadioButton, QStyleFactory
 )
 from PyQt6.QtCore import Qt, QTimer, QThread
-from PyQt6.QtGui import QPalette, QColor
+from PyQt6.QtGui import QColor
 
 # --- Import the generated UI class ---
 from gui import Ui_Dialog
@@ -70,6 +70,8 @@ from thermo_components.adapters.persistence import SqliteLhvRepository
 from thermo_components.adapters.reporting import OpenPyxlReportExporter
 from thermo_components.adapters.ui import (
     CalculationWorker,
+    ComponentAddStatus,
+    ComponentRemoveStatus,
     CompositionTableController,
     ThermoWarningBannerController,
     build_result_list_items,
@@ -523,46 +525,17 @@ class MainWindow(QMainWindow):
         # Step 5: Reset progress bar to 0 on add component
         if hasattr(self.ui, 'progressBar'):
             self.ui.progressBar.setValue(0)
-        component = self.ui.comboBox_select_components.currentText()
-
-        # Don't add the dummy entry or duplicates
-        if not component.strip():
-            return # Ignore the dummy empty selection
-
-        # Check for duplicates in the list_widget (selected_components_list)
-        current_items = [self.ui.selected_components_list.item(i).text() for i in range(self.ui.selected_components_list.count())]
-        if component in current_items:
-            # Highlight combo red and disable Go (or show message box)
-            palette = self.ui.comboBox_select_components.palette()
-            palette.setColor(QPalette.ColorRole.Base, QColor('red'))
-            self.ui.comboBox_select_components.setPalette(palette)
-            # self.ui.go_button.setEnabled(False) # Disabling Go might be too strict
-            QMessageBox.warning(self, "Duplicate", f"Component '{component}' is already selected.")
-            # Reset combo index to dummy after showing message
-            self.ui.comboBox_select_components.setCurrentIndex(0)
+        result = self.composition_table.add_selected_component()
+        if result.status is ComponentAddStatus.EMPTY_SELECTION:
             return
-
-        # Reset combo box color if previously red
-        palette = self.ui.comboBox_select_components.palette()
-        palette.setColor(QPalette.ColorRole.Base, QColor('white'))
-        self.ui.comboBox_select_components.setPalette(palette)
-
-        # Add to the list_widget
-        self.ui.selected_components_list.addItem(component)
-
-        # Add to the tableWidget
-        total_row_index = self.ui.tableWidget.rowCount() - 1
-        self.ui.tableWidget.insertRow(total_row_index)
-        # Put the component name in column 0 (non-editable)
-        name_item = QTableWidgetItem(component)
-        name_item.setFlags(name_item.flags() & ~Qt.ItemFlag.ItemIsEditable) # Make name non-editable
-        self.ui.tableWidget.setItem(total_row_index, 0, name_item)
-
-        # Add empty items for Mol% and Wt% columns
-        mol_item = QTableWidgetItem("") # Start empty
-        wt_item = QTableWidgetItem("") # Start empty
-        self.ui.tableWidget.setItem(total_row_index, 1, mol_item)
-        self.ui.tableWidget.setItem(total_row_index, 2, wt_item)
+        if result.status is ComponentAddStatus.DUPLICATE:
+            QMessageBox.warning(
+                self,
+                "Duplicate",
+                f"Component '{result.component_name}' is already selected.",
+            )
+            self.composition_table.reset_component_selection()
+            return
 
         # Re-apply basis logic to set correct editability/colors for the new row
         self.on_input_basis_changed() # This will handle flags and background
@@ -571,7 +544,7 @@ class MainWindow(QMainWindow):
         self.update_table_total()
 
         # Reset combo index to dummy/placeholder
-        self.ui.comboBox_select_components.setCurrentIndex(0)
+        self.composition_table.reset_component_selection()
 
         # Clear results after successful add because prior calculations are now stale.
         self.invalidate_results()
@@ -581,46 +554,19 @@ class MainWindow(QMainWindow):
         # Step 5: Reset progress bar to 0 on remove component
         if hasattr(self.ui, 'progressBar'):
             self.ui.progressBar.setValue(0)
-        selected_list_items = self.ui.selected_components_list.selectedItems()
-
-        if not selected_list_items:
-            # If nothing selected, maybe remove the last one added? Or show message.
-            if self.ui.selected_components_list.count() > 0:
-                 current_row = self.ui.selected_components_list.currentRow()
-                 if current_row < 0: # If nothing is actively selected, use last item
-                      current_row = self.ui.selected_components_list.count() - 1
-                 item_to_remove = self.ui.selected_components_list.takeItem(current_row) # Remove from list
-                 if item_to_remove:
-                      self._remove_component_from_table(item_to_remove.text()) # Remove from table
-            else:
-                 QMessageBox.information(self, "Remove", "No components to remove.")
-                 return
-        else:
-            # Remove all selected items
-            for item in selected_list_items:
-                row = self.ui.selected_components_list.row(item)
-                comp_name = item.text()
-                self.ui.selected_components_list.takeItem(row) # Remove from list
-                self._remove_component_from_table(comp_name) # Remove from table by name
+        result = self.composition_table.remove_selected_components()
+        if result.status is ComponentRemoveStatus.NO_COMPONENTS:
+            QMessageBox.information(self, "Remove", "No components to remove.")
+            return
 
         self.update_table_total()
-        # Reset combo color if it was red
-        if self.ui.selected_components_list.count() == 0:
-            palette = self.ui.comboBox_select_components.palette()
-            palette.setColor(QPalette.ColorRole.Base, QColor('white'))
-            self.ui.comboBox_select_components.setPalette(palette)
 
         # Clear results after successful remove because prior calculations are now stale.
         self.invalidate_results()
 
     def _remove_component_from_table(self, comp_name):
         """Helper to remove the row matching comp_name from the table."""
-        # Iterate backwards to avoid index issues when removing rows
-        for row_index in range(self.ui.tableWidget.rowCount() - 2, -1, -1): # Stop before Total row
-            table_item = self.ui.tableWidget.item(row_index, 0)
-            if table_item and table_item.text() == comp_name:
-                self.ui.tableWidget.removeRow(row_index)
-                break # Assume component names are unique
+        self.composition_table.remove_component_from_table(comp_name)
 
     def clear_all(self):
         """Clear all inputs, selections, and results."""
@@ -629,13 +575,7 @@ class MainWindow(QMainWindow):
             self.ui.progressBar.setValue(0)
         # Clear results at the start because all prior calculations are now stale.
         self.invalidate_results()
-        # Clear list
-        self.ui.selected_components_list.clear()
-
-        # Clear table (remove all rows except the header and 'Total' row)
-        # Iterate backwards from second-to-last row up to first row
-        while self.ui.tableWidget.rowCount() > 1:
-             self.ui.tableWidget.removeRow(0) # Remove the first component row repeatedly
+        self.composition_table.clear_component_rows_and_selection()
 
         # Clear results list
         # self.ui.results_list.clear() # Already cleared above
@@ -645,10 +585,6 @@ class MainWindow(QMainWindow):
 
         # Reset UI states
         self.ui.go_button.setEnabled(True) # Re-enable Go button
-        palette = self.ui.comboBox_select_components.palette()
-        palette.setColor(QPalette.ColorRole.Base, QColor('white'))
-        self.ui.comboBox_select_components.setPalette(palette)
-        self.ui.comboBox_select_components.setCurrentIndex(0) # Reset selection
         # Reset T/P/EOS combos to defaults maybe?
         self.ui.comboBox_select_temperature.setCurrentText("0 °C")
         self.ui.comboBox_select_pressure.setCurrentText("1 atm")
