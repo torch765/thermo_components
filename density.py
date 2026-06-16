@@ -5,7 +5,7 @@ from pathlib import Path
 
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QComboBox, QListWidget,
-    QPushButton, QLabel, QGridLayout, QVBoxLayout, QTableWidget,
+    QPushButton, QGridLayout, QVBoxLayout, QTableWidget,
     QTableWidgetItem, QMessageBox, QHeaderView, QHBoxLayout, QButtonGroup, QRadioButton, QStyleFactory
 )
 from PyQt6.QtCore import Qt, QTimer, QThread
@@ -70,6 +70,7 @@ from thermo_components.adapters.persistence import SqliteLhvRepository
 from thermo_components.adapters.reporting import OpenPyxlReportExporter
 from thermo_components.adapters.ui import (
     CalculationWorker,
+    ThermoWarningBannerController,
     build_result_list_items,
     collect_property_calculation_request,
 )
@@ -253,88 +254,14 @@ class MainWindow(QMainWindow):
 
     def setup_thermo_warning_banner(self):
         """Create a persistent, non-modal warning banner above the main results area."""
-        self.thermo_warning_label = QLabel(self.ui.tab)
-        self.thermo_warning_label.setObjectName("thermoWarningLabel")
-        self.thermo_warning_label.setWordWrap(True)
-        self.thermo_warning_label.setTextFormat(Qt.TextFormat.PlainText)
-        self.thermo_warning_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
-        self.thermo_warning_label.setMargin(8)
-        self.thermo_warning_label.setStyleSheet(
-            "QLabel#thermoWarningLabel {"
-            "background-color: rgb(255, 244, 204);"
-            "color: rgb(122, 63, 0);"
-            "border: 1px solid rgb(230, 184, 0);"
-            "border-radius: 4px;"
-            "}"
-        )
-        self.thermo_warning_label.hide()
-
-        self._results_label_base_geometry = self.ui.results_label.geometry()
-        self._results_list_base_geometry = self.ui.results_list.geometry()
-        self._progress_bar_base_geometry = self.ui.progressBar.geometry() if hasattr(self.ui, "progressBar") else None
-        self._warning_banner_y = self.ui.groupBox.geometry().bottom() + 8
+        self.thermo_warning_banner = ThermoWarningBannerController(self.ui)
+        self.thermo_warning_label = self.thermo_warning_banner.label
 
     def set_thermo_warning_messages(self, warning_messages: list[str]):
         """Show or hide the persistent thermo warning banner."""
-        if not hasattr(self, "thermo_warning_label"):
+        if not hasattr(self, "thermo_warning_banner"):
             return
-
-        cleaned_messages = [str(message).strip() for message in warning_messages if str(message).strip()]
-        if not cleaned_messages:
-            self.thermo_warning_label.hide()
-            self.ui.results_label.setGeometry(self._results_label_base_geometry)
-            self.ui.results_list.setGeometry(self._results_list_base_geometry)
-            if self._progress_bar_base_geometry is not None:
-                self.ui.progressBar.setGeometry(self._progress_bar_base_geometry)
-            return
-
-        warning_text = "\n".join(cleaned_messages)
-        banner_width = self._results_list_base_geometry.width()
-        text_rect = self.thermo_warning_label.fontMetrics().boundingRect(
-            0,
-            0,
-            banner_width - 16,
-            1000,
-            int(Qt.TextFlag.TextWordWrap),
-            warning_text,
-        )
-        banner_height = max(44, text_rect.height() + 16)
-        self.thermo_warning_label.setText(warning_text)
-        self.thermo_warning_label.setGeometry(
-            self._results_list_base_geometry.x(),
-            self._warning_banner_y,
-            banner_width,
-            banner_height,
-        )
-        self.thermo_warning_label.show()
-        self.thermo_warning_label.raise_()
-
-        results_label_y = self._warning_banner_y + banner_height + 8
-        self.ui.results_label.setGeometry(
-            self._results_label_base_geometry.x(),
-            results_label_y,
-            self._results_label_base_geometry.width(),
-            self._results_label_base_geometry.height(),
-        )
-
-        list_y_offset = self._results_list_base_geometry.y() - self._results_label_base_geometry.y()
-        results_list_y = results_label_y + list_y_offset
-        base_results_bottom = self._results_list_base_geometry.y() + self._results_list_base_geometry.height()
-        results_list_height = max(100, base_results_bottom - results_list_y)
-        self.ui.results_list.setGeometry(
-            self._results_list_base_geometry.x(),
-            results_list_y,
-            self._results_list_base_geometry.width(),
-            results_list_height,
-        )
-
-        if self._progress_bar_base_geometry is not None:
-            self.ui.progressBar.setGeometry(
-                self._progress_bar_base_geometry.x(),
-                base_results_bottom + 8,
-                self._progress_bar_base_geometry.width(),
-                self._progress_bar_base_geometry.height(),
-            )
+        self.thermo_warning_banner.set_messages(warning_messages)
 
     def get_export_base_dir(self):
         """Return the directory where generated reports should be saved."""

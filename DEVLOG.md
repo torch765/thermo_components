@@ -8,6 +8,7 @@
 - Started refactor Phase 4 by moving `CalculationWorker` into `adapters/ui/qt_worker.py`.
 - Moved main results-list formatting into `adapters/ui/presenters.py` and added presenter tests.
 - Moved calculation input collection and basic widget parsing into `adapters/ui/input_collection.py`.
+- Moved thermo warning-banner rendering and layout restoration into `adapters/ui/warning_banner.py`.
 
 ### 2026-06-15
 - Started refactor Phase 3 by adding the application-owned `ThermoPropertyGateway` port.
