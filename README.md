@@ -65,8 +65,8 @@ thermo_components/
     thermo_components/
       domain/          # Extracted framework-free business rules
       application/     # Typed DTOs and workflow use cases
-      adapters/        # Thermo, SQLite, Excel, and packaging integrations
-      bootstrap/       # Reserved for dependency wiring
+      adapters/        # Thermo, SQLite, Excel, packaging, and Qt integrations
+      bootstrap/       # Desktop dependency composition
   tests/               # Characterization tests
   docs/               # Architecture and roadmap documents
 ```
@@ -80,7 +80,7 @@ The target design is a practical hexagonal architecture:
 - Adapters will isolate PyQt, `thermo`, SQLite, Excel, and packaging concerns.
 - The current UI should remain functional throughout the migration; this is an incremental refactor, not a rewrite branch.
 
-Phases 1, 2, and 3 are complete, and Phase 4 is in progress. The domain package owns pure rules, application use cases coordinate workflows through formal ports, and thermodynamics, SQLite LHV persistence, Excel reporting, resource lookup, desktop dependency composition, and several Qt controllers are isolated outside the launcher. The remaining Phase 4 work is to keep shrinking `MainWindow` into clearer controller/presenter boundaries.
+Phases 1 through 4 are complete. The domain package owns pure rules, application use cases coordinate workflows through formal ports, and thermodynamics, SQLite LHV persistence, Excel reporting, resource lookup, desktop dependency composition, and several Qt controllers are isolated outside the launcher. The next refactor target is shrinking or relocating `MainWindow` while keeping `density.py` as a compatibility launcher.
 
 ## Development Notes
 

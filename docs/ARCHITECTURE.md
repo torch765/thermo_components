@@ -14,12 +14,13 @@ The objective is not "DDD for its own sake." The objective is to isolate the eng
 
 ## Current State
 
-Phases 1, 2, and 3 have extracted framework-free rules, application workflows, thermodynamics integration, LHV persistence, resource location, and Excel report export. Phase 4 has started by extracting the Qt worker bridge, calculation input collector, warning-banner controller, composition-table controller, report-export controller, desktop dependency composition, and results-list presenter. The following responsibilities still live in [density.py](../density.py):
+Phases 1 through 4 have extracted framework-free rules, application workflows, thermodynamics integration, LHV persistence, resource location, Excel report export, Qt worker/presenter/controller helpers, and desktop dependency composition. The following responsibilities still live in [density.py](../density.py):
 
-- Qt controller logic and thread wiring
-- remaining PyQt widget workflow coordination
-- report export request assembly
-- compatibility launcher and `MainWindow` hosting
+- `MainWindow` hosting and compatibility launcher behavior
+- calculation thread/progress orchestration
+- flow-tab widget setup and conversion rendering
+- report export request assembly from current UI state
+- remaining PyQt signal coordination
 
 The extracted domain modules currently own:
 
@@ -277,7 +278,7 @@ The current module should be decomposed as follows:
 | Calculation input collection | Extracted | `adapters/ui/input_collection.py` |
 | Thermo warning banner | Extracted | `adapters/ui/warning_banner.py` |
 | Composition table setup, basis styling, total validation, row/list mutation, and normalization table rendering | Extracted | `adapters/ui/composition_table.py` |
-| Remaining UI state and rendering | `MainWindow` plus extracted UI controllers | `adapters/ui/qt_main_window.py`, additional presenters/controllers |
+| Remaining `MainWindow` hosting and workflow coordination | `density.py` plus extracted UI controllers | `adapters/ui/qt_main_window.py`, additional presenters/controllers |
 | Resource lookup | Extracted; compatibility wrapper remains | `application/ports/resources.py`, `adapters/packaging/resource_locator.py` |
 | Desktop dependency composition | Extracted; compatibility launcher remains | `bootstrap/desktop.py` |
 

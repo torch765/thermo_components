@@ -16,7 +16,7 @@ This roadmap is designed for incremental execution. The application must remain 
 
 ## Phased Plan
 
-Current status: Phases 0, 1, 2, and 3 are complete. Phase 4 is in progress; the Qt worker bridge, result-list presenter, calculation input collector, warning-banner controller, composition-table setup/basis/total/row/normalization controller, report-export controller, and desktop dependency composition have been extracted.
+Current status: Phases 0, 1, 2, 3, and 4 are complete. The remaining work is to shrink or relocate `MainWindow`, keep `density.py` as a compatibility launcher, and finish consolidation/packaging cleanup.
 
 ### Phase 0: Stabilize and Characterize
 
@@ -89,7 +89,7 @@ Exit criteria:
 
 ### Phase 4: Refactor the Qt Layer
 
-Status: In progress. Phase 4A started on 2026-06-16.
+Status: Complete as of 2026-06-16.
 
 Deliverables:
 
@@ -111,27 +111,33 @@ Completed so far:
 - Moved report export path selection, export dialogs, and optional file opening into `adapters/ui/report_controller.py`.
 - Moved concrete desktop dependency composition into `bootstrap/desktop.py`.
 
-Remaining:
+Deferred to Phase 5:
 
-- Introduce smaller Qt controller/presenter modules around remaining `MainWindow` workflow coordination, then decide whether to move `MainWindow` itself into `adapters/ui`.
+- Remaining calculation/progress orchestration around `QThread`, result lifecycle, and progress animation.
+- Flow-tab widget setup and conversion rendering.
+- Report export request assembly from current conditions and composition rows.
+- Final decision on moving `MainWindow` itself into `adapters/ui`.
 
 Exit criteria:
 
 - Widget code mostly maps inputs and renders outputs.
 - New UI behavior can be changed without touching calculation rules.
 
-### Phase 5: Extract Reporting and Bootstrap
+### Phase 5: Thin Launcher and MainWindow Migration
 
 Deliverables:
 
-- Move Excel export into a reporting adapter.
-- Introduce a bootstrap module that wires adapters and use cases.
-- Reduce `density.py` to a thin compatibility launcher or replace it with a package entry point.
+- Move `MainWindow` into `adapters/ui/qt_main_window.py` or reduce `density.py` to importing it.
+- Extract remaining calculation/progress workflow coordination only after adding targeted tests.
+- Extract remaining flow-tab UI coordination if it still materially clutters `MainWindow`.
+- Move report request assembly behind a small UI/application boundary if the current helper wrappers become a blocker.
+- Keep legacy aliases and wrappers in `density.py` until tests and packaging no longer need them.
 
 Exit criteria:
 
-- Startup and dependency wiring are explicit.
-- Export logic no longer scrapes UI state directly.
+- `density.py` is a thin compatibility launcher plus legacy import aliases.
+- `MainWindow` construction uses the bootstrap dependency container.
+- Remaining UI workflows have direct regression coverage before they move.
 
 ### Phase 6: Consolidate and Clean Up
 
