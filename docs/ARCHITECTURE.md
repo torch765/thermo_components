@@ -14,10 +14,10 @@ The objective is not "DDD for its own sake." The objective is to isolate the eng
 
 ## Current State
 
-Phases 1, 2, and 3 have extracted framework-free rules, application workflows, thermodynamics integration, LHV persistence, resource location, and Excel report export. The following responsibilities still live in [density.py](../density.py):
+Phases 1, 2, and 3 have extracted framework-free rules, application workflows, thermodynamics integration, LHV persistence, resource location, and Excel report export. Phase 4 has started by extracting the Qt worker bridge and results-list presenter. The following responsibilities still live in [density.py](../density.py):
 
-- Qt thread and signal setup
-- PyQt widget state and rendering
+- Qt controller logic and thread wiring
+- most PyQt widget state and rendering
 - report export button coordination and user messaging
 - startup and dependency composition
 
@@ -269,11 +269,12 @@ The current module should be decomposed as follows:
 | Property calculation orchestration | Extracted | `application/use_cases/calculate_properties.py` |
 | Flow and composition workflows | Extracted | `application/use_cases/convert_flow.py`, `application/use_cases/normalize_composition.py` |
 | Report projection | Extracted | `application/use_cases/prepare_report.py` |
-| Qt thread bridge | `CalculationWorker` | `adapters/ui/qt_worker.py` |
+| Qt thread bridge | Extracted; imported by launcher | `adapters/ui/qt_worker.py` |
 | `thermo` integration | Extracted; compatibility alias remains | `application/ports/thermo.py`, `adapters/thermo/thermo_gateway.py` |
 | Excel export | Extracted; button coordination remains | `application/ports/reporting.py`, `adapters/reporting/openpyxl_report_exporter.py` |
 | LHV DB loading | Extracted; compatibility wrapper remains | `application/ports/persistence.py`, `adapters/persistence/sqlite_lhv_repository.py` |
-| UI state and rendering | `MainWindow` | `adapters/ui/qt_main_window.py`, `adapters/ui/presenters.py` |
+| Result-list presentation | Extracted | `adapters/ui/presenters.py` |
+| UI state and rendering | `MainWindow` | `adapters/ui/qt_main_window.py`, additional presenters |
 | Resource lookup | Extracted; compatibility wrapper remains | `application/ports/resources.py`, `adapters/packaging/resource_locator.py` |
 | Startup composition | `main` | `bootstrap/main.py` |
 

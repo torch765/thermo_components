@@ -1,4 +1,4 @@
-from density import CalculationWorker
+from thermo_components.adapters.ui import CalculationWorker
 
 
 class StubUseCase:

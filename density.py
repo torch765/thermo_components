@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (
     QPushButton, QLabel, QGridLayout, QVBoxLayout, QTableWidget,
     QTableWidgetItem, QMessageBox, QHeaderView, QHBoxLayout, QButtonGroup, QRadioButton, QStyleFactory
 )
-from PyQt6.QtCore import Qt, QTimer, QObject, pyqtSignal, QThread
+from PyQt6.QtCore import Qt, QTimer, QThread
 from PyQt6.QtGui import QPalette, QColor
 
 # --- Import the generated UI class ---
@@ -59,8 +59,6 @@ from thermo_components.domain.lhv import (
     KCAL_PER_MJ,
     MJ_PER_MMBTU,
     NORMAL_MOLAR_VOLUME_NM3_PER_KMOL,
-    build_lhv_display_values,
-    format_lhv_display_value,
 )
 from thermo_components.domain.results import (
     build_density_note,
@@ -70,6 +68,10 @@ from thermo_components.adapters.thermo import ThermoGateway
 from thermo_components.adapters.packaging import RuntimeResourceLocator
 from thermo_components.adapters.persistence import SqliteLhvRepository
 from thermo_components.adapters.reporting import OpenPyxlReportExporter
+from thermo_components.adapters.ui import (
+    CalculationWorker,
+    build_result_list_items,
+)
 from thermo_components.application.dto import (
     DeriveCompositionRequest,
     FlowConversionRequest,
@@ -100,28 +102,6 @@ def resource_path(relative_path):
     """Resolve a resource in source mode or a PyInstaller bundle."""
     return str(RuntimeResourceLocator().resolve(relative_path))
 
-
-# Step 1: Worker class for threaded calculation
-class CalculationWorker(QObject):
-    result = pyqtSignal(object)
-    error = pyqtSignal(str)
-    finished = pyqtSignal()
-
-    def __init__(self, use_case, request):
-        super().__init__()
-        self.use_case = use_case
-        self.request = request
-
-    def run(self):
-        try:
-            self.result.emit(self.use_case.execute(self.request))
-        except ValueError as exc:
-            self.error.emit(f"Error: {exc}")
-        except Exception as e:
-            import traceback
-            self.error.emit(f"Worker Exception: {e}\n{traceback.format_exc()}")
-        finally:
-            self.finished.emit()
 
 # --- MainWindow Class (Modified for gui.py) ---
 class MainWindow(QMainWindow):
@@ -989,103 +969,12 @@ class MainWindow(QMainWindow):
         self.set_thermo_warning_messages(result_data.get("warnings") or [])
         self.update_flow_conversion()
         self.ui.results_list.clear()
-        self.ui.results_list.addItem(f"Calculating for {result_data['basis']} basis...")
-        self.ui.results_list.addItem(f"Model / EOS: {result_data.get('model_display', self.calculator.eos)}")
-        self.ui.results_list.addItem(f"Avg. Molecular Wt: {result_data['mw']:.2f} g/mol")
-        # Density/Phase
-        density_result = result_data['density_result']
-        phase = result_data['phase']
-        error = result_data['density_error']
-        if error:
-            self.ui.results_list.addItem("Phase @ selected conditions: N.A.")
-            self.ui.results_list.addItem("Density @ selected conditions: N.A.")
-            self.ui.results_list.addItem(f"Density/Phase Error: {error}")
-        elif phase == "Two-Phase" and density_result is not None:
-            if isinstance(density_result, tuple) and len(density_result) == 2:
-                density_liq, density_gas = density_result
-                self.ui.results_list.addItem(f"Phase @ selected conditions: {phase}")
-                if density_liq is not None:
-                    self.ui.results_list.addItem(f"  Density @ selected conditions (Liq): {density_liq:.3f} kg/m³")
-                else:
-                    self.ui.results_list.addItem("  Density @ selected conditions (Liq): N.A.")
-                if density_gas is not None:
-                    self.ui.results_list.addItem(f"  Density @ selected conditions (Vap): {density_gas:.3f} kg/m³")
-                else:
-                    self.ui.results_list.addItem("  Density @ selected conditions (Vap): N.A.")
-            else:
-                self.ui.results_list.addItem(f"Phase @ selected conditions: {phase} (Result format unexpected)")
-        elif density_result is not None:
-            self.ui.results_list.addItem(f"Phase @ selected conditions: {phase or 'Could not determine.'}")
-            self.ui.results_list.addItem(f"Density @ selected conditions: {density_result:.3f} kg/m³")
-        elif phase:
-            self.ui.results_list.addItem(f"Phase @ selected conditions: {phase}")
-            self.ui.results_list.addItem("Density @ selected conditions: N.A.")
-        else:
-            self.ui.results_list.addItem("Phase @ selected conditions: Could not determine.")
-            self.ui.results_list.addItem("Density @ selected conditions: N.A.")
-
-        def add_reference_density_line(label, density_value, phase_value, error_value):
-            if density_value is not None:
-                self.ui.results_list.addItem(f"{label}: {density_value:.3f} kg/m³")
-                return
-            detail = ""
-            if error_value:
-                detail = f" ({error_value})"
-            elif phase_value == "Two-Phase":
-                detail = " (Two-Phase)"
-            self.ui.results_list.addItem(f"{label}: N.A.{detail}")
-
-        add_reference_density_line(
-            "Density @ normal conditions",
-            result_data.get("density_normal_kg_m3"),
-            result_data.get("density_normal_phase"),
-            result_data.get("density_normal_error"),
-        )
-        add_reference_density_line(
-            "Density @ standard conditions",
-            result_data.get("density_standard_kg_m3"),
-            result_data.get("density_standard_phase"),
-            result_data.get("density_standard_error"),
-        )
-        # Bubble Point
-        bubble_point = result_data['bubble_point']
-        bp_error = result_data['bp_error']
-        pressure_atm = result_data['pressure_atm']
-        if bp_error:
-            self.ui.results_list.addItem(f"Bubble Point Error: {bp_error}")
-        elif bubble_point is not None:
-            self.ui.results_list.addItem(f"Bubble Point @ {pressure_atm} atm: {bubble_point:.2f} °C")
-        else:
-            self.ui.results_list.addItem(f"Bubble Point: Calculation failed.")
-        # LHV
-        if self.lhv_data_loaded:
-            mixture_lhv = result_data['mixture_lhv']
-            missing_lhv = result_data['missing_lhv']
-            if missing_lhv:
-                self.ui.results_list.addItem(f"LHV Warning: No data for: {', '.join(missing_lhv)}")
-            self.ui.results_list.addItem("-" * 40)
-            lhv_display_values = build_lhv_display_values(mixture_lhv, result_data['mw'])
-            volumetric_lines = [
-                ("Mixture LHV = ", "MJ/Nm³"),
-                ("= ", "kcal/Nm³"),
-                ("= ", "MMkcal/Nm³"),
-                ("= ", "GJ/Nm³"),
-                ("= ", "MMBtu/Nm³"),
-            ]
-            for prefix, unit in volumetric_lines:
-                self.ui.results_list.addItem(
-                    f"{prefix}{format_lhv_display_value(lhv_display_values['volumetric'][unit])} {unit}"
-                )
-
-            self.ui.results_list.addItem("")
-            self.ui.results_list.addItem("Mass basis:")
-            for unit in ["MJ/kg", "MJ/t", "GJ/kg", "GJ/t", "kcal/kg", "kcal/t", "MMkcal/kg", "MMkcal/t", "MMBtu/kg", "MMBtu/t"]:
-                self.ui.results_list.addItem(
-                    f"= {format_lhv_display_value(lhv_display_values['mass_basis'][unit])} {unit}"
-                )
-        else:
-            self.ui.results_list.addItem("-" * 40)
-            self.ui.results_list.addItem("Mixture LHV = N/A (DB not loaded)")
+        for item in build_result_list_items(
+            response,
+            lhv_data_loaded=self.lhv_data_loaded,
+            fallback_model_display=self.calculator.eos,
+        ):
+            self.ui.results_list.addItem(item)
         self.animate_progress_to(100, 500)
 
     def on_calculation_error(self, error_msg):

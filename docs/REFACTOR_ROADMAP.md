@@ -16,7 +16,7 @@ This roadmap is designed for incremental execution. The application must remain 
 
 ## Phased Plan
 
-Current status: Phases 0, 1, 2, and 3 are complete. Phase 4 is the next implementation phase.
+Current status: Phases 0, 1, 2, and 3 are complete. Phase 4 is in progress; the Qt worker bridge and result-list presenter have been extracted.
 
 ### Phase 0: Stabilize and Characterize
 
@@ -89,6 +89,8 @@ Exit criteria:
 
 ### Phase 4: Refactor the Qt Layer
 
+Status: In progress. Phase 4A started on 2026-06-16.
+
 Deliverables:
 
 - Split the current `MainWindow` into:
@@ -96,6 +98,16 @@ Deliverables:
   - a presenter
   - a worker/async bridge
 - Remove business rules from widget event handlers.
+
+Completed so far:
+
+- Moved `CalculationWorker` into `adapters/ui/qt_worker.py`.
+- Moved result-list formatting into `adapters/ui/presenters.py`.
+
+Remaining:
+
+- Continue extracting input collection and validation from `MainWindow`.
+- Introduce smaller Qt controller/presenter modules around table state, warnings, and report actions.
 
 Exit criteria:
 

@@ -5,6 +5,8 @@
 - Moved Excel workbook layout, formatting, and file writing out of `density.py`.
 - Reduced `MainWindow.export_results_to_excel` to report request assembly, user messaging, and optional file opening.
 - Added report-export adapter tests and enforced the OpenPyXL import boundary.
+- Started refactor Phase 4 by moving `CalculationWorker` into `adapters/ui/qt_worker.py`.
+- Moved main results-list formatting into `adapters/ui/presenters.py` and added presenter tests.
 
 ### 2026-06-15
 - Started refactor Phase 3 by adding the application-owned `ThermoPropertyGateway` port.
