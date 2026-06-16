@@ -71,6 +71,7 @@ from thermo_components.adapters.reporting import OpenPyxlReportExporter
 from thermo_components.adapters.ui import (
     CalculationWorker,
     build_result_list_items,
+    collect_property_calculation_request,
 )
 from thermo_components.application.dto import (
     DeriveCompositionRequest,
@@ -79,7 +80,6 @@ from thermo_components.application.dto import (
     ReportCompositionRow,
     ReportConditionRow,
     ReportExportRequest,
-    PropertyCalculationRequest,
     ReportPreparationRequest,
     coerce_property_response,
 )
@@ -876,56 +876,9 @@ class MainWindow(QMainWindow):
         self.animate_progress_to(80, 1000)
         self.invalidate_results()
 
-        # --- Gather inputs for worker ---
-        comp_names = []
-        mol_percents = []
-        wt_percents = []
-        row_count = self.ui.tableWidget.rowCount() - 1 # Exclude total row
-        valid_input = True
-        for r in range(row_count):
-            comp_item = self.ui.tableWidget.item(r, 0)
-            mol_item = self.ui.tableWidget.item(r, 1)
-            wt_item = self.ui.tableWidget.item(r, 2)
-            if not comp_item: continue
-            comp_names.append(comp_item.text())
-            try:
-                mol_val = float(mol_item.text()) if mol_item and mol_item.text().strip() else 0.0
-                mol_percents.append(mol_val)
-            except ValueError:
-                mol_percents.append(0.0)
-                if self.ui.radioButton_mol_percent.isChecked(): valid_input = False
-            try:
-                wt_val = float(wt_item.text()) if wt_item and wt_item.text().strip() else 0.0
-                wt_percents.append(wt_val)
-            except ValueError:
-                wt_percents.append(0.0)
-                if self.ui.radioButton_wt_percent.isChecked(): valid_input = False
-
-        if not valid_input:
-            self.ui.results_list.addItem("Error: Invalid numeric input in composition table.")
-            self.animate_progress_to(100, 500)
-            return
-        if not comp_names:
-            self.ui.results_list.addItem("Error: No components selected.")
-            self.animate_progress_to(100, 500)
-            return
-
-        basis = "Mol %" if self.ui.radioButton_mol_percent.isChecked() else "Wt %"
-        try:
-            temp_text = self.ui.comboBox_select_temperature.currentText()
-            T_c = float(temp_text.split("°")[0])
-            T_k = T_c + 273.15
-        except ValueError:
-            self.ui.results_list.addItem("Error: Invalid Temperature selection.")
-            self.animate_progress_to(100, 500)
-            return
-        try:
-            pressure_text = self.ui.comboBox_select_pressure.currentText()
-            pressure_atm = float(pressure_text.split(" ")[0])
-            pressure_pa = pressure_atm * 101325.0
-            if pressure_pa <= 0: raise ValueError("Pressure must be positive")
-        except ValueError:
-            self.ui.results_list.addItem("Error: Invalid Pressure selection.")
+        collected_input = collect_property_calculation_request(self.ui)
+        if collected_input.error_message:
+            self.ui.results_list.addItem(collected_input.error_message)
             self.animate_progress_to(100, 500)
             return
 
@@ -933,19 +886,10 @@ class MainWindow(QMainWindow):
         self.ui.go_button.setEnabled(False)
         if hasattr(self.ui, "printResultsButton"):
             self.ui.printResultsButton.setEnabled(False)
-        calculation_request = PropertyCalculationRequest.from_sequences(
-            component_names=comp_names,
-            mole_percents=mol_percents,
-            weight_percents=wt_percents,
-            basis=basis,
-            temperature_k=T_k,
-            pressure_pa=pressure_pa,
-            pressure_atm=pressure_atm,
-        )
         self.worker_thread = QThread()
         self.worker = CalculationWorker(
             use_case=self.calculate_properties_use_case,
-            request=calculation_request,
+            request=collected_input.request,
         )
         self.worker.moveToThread(self.worker_thread)
         self.worker.result.connect(self.on_calculation_result)

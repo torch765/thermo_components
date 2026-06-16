@@ -99,3 +99,17 @@ def test_main_window_renders_presented_result_items(qt_app):
     assert window.density_standard_kg_m3 == 0.68
 
     window.close()
+
+
+def test_main_window_uses_input_collector_errors(qt_app):
+    from density import MainWindow
+
+    window = MainWindow(lhv_data={})
+
+    window.calculate_and_display()
+
+    assert window.ui.results_list.item(0).text() == (
+        "Error: No components selected."
+    )
+
+    window.close()

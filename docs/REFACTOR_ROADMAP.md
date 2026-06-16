@@ -16,7 +16,7 @@ This roadmap is designed for incremental execution. The application must remain 
 
 ## Phased Plan
 
-Current status: Phases 0, 1, 2, and 3 are complete. Phase 4 is in progress; the Qt worker bridge and result-list presenter have been extracted.
+Current status: Phases 0, 1, 2, and 3 are complete. Phase 4 is in progress; the Qt worker bridge, result-list presenter, and calculation input collector have been extracted.
 
 ### Phase 0: Stabilize and Characterize
 
@@ -103,10 +103,10 @@ Completed so far:
 
 - Moved `CalculationWorker` into `adapters/ui/qt_worker.py`.
 - Moved result-list formatting into `adapters/ui/presenters.py`.
+- Moved calculation input collection into `adapters/ui/input_collection.py`.
 
 Remaining:
 
-- Continue extracting input collection and validation from `MainWindow`.
 - Introduce smaller Qt controller/presenter modules around table state, warnings, and report actions.
 
 Exit criteria:

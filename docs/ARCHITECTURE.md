@@ -14,7 +14,7 @@ The objective is not "DDD for its own sake." The objective is to isolate the eng
 
 ## Current State
 
-Phases 1, 2, and 3 have extracted framework-free rules, application workflows, thermodynamics integration, LHV persistence, resource location, and Excel report export. Phase 4 has started by extracting the Qt worker bridge and results-list presenter. The following responsibilities still live in [density.py](../density.py):
+Phases 1, 2, and 3 have extracted framework-free rules, application workflows, thermodynamics integration, LHV persistence, resource location, and Excel report export. Phase 4 has started by extracting the Qt worker bridge, calculation input collector, and results-list presenter. The following responsibilities still live in [density.py](../density.py):
 
 - Qt controller logic and thread wiring
 - most PyQt widget state and rendering
@@ -274,6 +274,7 @@ The current module should be decomposed as follows:
 | Excel export | Extracted; button coordination remains | `application/ports/reporting.py`, `adapters/reporting/openpyxl_report_exporter.py` |
 | LHV DB loading | Extracted; compatibility wrapper remains | `application/ports/persistence.py`, `adapters/persistence/sqlite_lhv_repository.py` |
 | Result-list presentation | Extracted | `adapters/ui/presenters.py` |
+| Calculation input collection | Extracted | `adapters/ui/input_collection.py` |
 | UI state and rendering | `MainWindow` | `adapters/ui/qt_main_window.py`, additional presenters |
 | Resource lookup | Extracted; compatibility wrapper remains | `application/ports/resources.py`, `adapters/packaging/resource_locator.py` |
 | Startup composition | `main` | `bootstrap/main.py` |
