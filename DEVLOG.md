@@ -5,6 +5,10 @@
 - Moved PRMIX and IAPWS95 calculations from `density.py` into `adapters/thermo/thermo_gateway.py`.
 - Kept `MixtureCalculator` as a compatibility alias while removing direct `thermo` and `chemicals` imports from the launcher.
 - Added real adapter smoke tests for methane and pure-water routes and enforced the thermodynamics import boundary.
+- Added application ports for LHV persistence and runtime resource location.
+- Moved SQLite loading and database seeding into `SqliteLhvRepository`.
+- Moved source/PyInstaller resource resolution into `RuntimeResourceLocator`.
+- Added persistence, resource-location, compatibility, and SQLite boundary tests.
 
 ### 2026-06-14
 - Added project-level architecture documentation for the planned DDD-inspired, hexagonal refactor.

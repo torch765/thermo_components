@@ -65,3 +65,27 @@ def test_thermo_dependencies_are_confined_to_the_thermo_adapter():
             violations[str(relative_path)] = sorted(thermo_imports)
 
     assert violations == {}
+
+
+def test_sqlite_dependency_is_confined_to_the_persistence_adapter():
+    source_paths = [
+        PROJECT_ROOT / "density.py",
+        PROJECT_ROOT / "lhv_data.py",
+        *PACKAGE_ROOT.rglob("*.py"),
+    ]
+    violations = {}
+
+    for path in source_paths:
+        sqlite_imports = imported_root_names(path) & {"sqlite3"}
+        if not sqlite_imports:
+            continue
+        relative_path = path.relative_to(PROJECT_ROOT)
+        if relative_path.parts[:4] != (
+            "src",
+            "thermo_components",
+            "adapters",
+            "persistence",
+        ):
+            violations[str(relative_path)] = sorted(sqlite_imports)
+
+    assert violations == {}

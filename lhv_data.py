@@ -1,4 +1,4 @@
-import sqlite3
+from thermo_components.adapters.persistence import SqliteLhvRepository
 
 # Data provided by the user (ensure keys match MOLECULAR_WEIGHTS keys)
 LHV_DATA_RAW = {
@@ -42,62 +42,13 @@ LHV_DATA_RAW = {
 }
 
 DB_NAME = 'lhv_data.db'
-TABLE_NAME = 'lhv_values'
 
 def create_database():
-    conn = None
-    try:
-        conn = sqlite3.connect(DB_NAME)
-        cursor = conn.cursor()
-
-        # Create table - Component name is primary key
-        cursor.execute(f'''
-        CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
-            component_name TEXT PRIMARY KEY,
-            lhv_mj_nm3 REAL NOT NULL
-        )
-        ''')
-
-        # Insert data - Use INSERT OR IGNORE to avoid errors if run multiple times
-        # or INSERT OR REPLACE to update values if they change
-        for name, lhv in LHV_DATA_RAW.items():
-             # Ensure name matches the keys in your main script's MOLECULAR_WEIGHTS exactly
-            component_key = name.strip().lower() # Normalize name just in case
-            if component_key: # Avoid inserting blank keys
-                cursor.execute(f'''
-                INSERT OR REPLACE INTO {TABLE_NAME} (component_name, lhv_mj_nm3)
-                VALUES (?, ?)
-                ''', (component_key, lhv))
-
-        conn.commit()
+    repository = SqliteLhvRepository(DB_NAME)
+    if repository.upsert_all(LHV_DATA_RAW):
         print(f"Database '{DB_NAME}' created and populated successfully.")
-
-    except sqlite3.Error as e:
-        print(f"Database error: {e}")
-    except Exception as e:
-        print(f"An error occurred: {e}")
-    finally:
-        if conn:
-            conn.close()
-
-            def print_database():
-                conn = None
-                try:
-                    conn = sqlite3.connect(DB_NAME)
-                    cursor = conn.cursor()
-                    cursor.execute(f"SELECT * FROM {TABLE_NAME}")
-                    rows = cursor.fetchall()
-                    for row in rows:
-                        print(f"Component: {row[0]}, LHV: {row[1]}")
-                except sqlite3.Error as e:
-                    print(f"Database error: {e}")
-                except Exception as e:
-                    print(f"An error occurred: {e}")
-                finally:
-                    if conn:
-                        conn.close()
-
-            print_database()
+        for component_name, lhv in repository.load_all().items():
+            print(f"Component: {component_name}, LHV: {lhv}")
 
 if __name__ == "__main__":
     create_database()

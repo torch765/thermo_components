@@ -1,5 +1,4 @@
 import sys
-import sqlite3
 import os # To check if DB file exists
 from datetime import datetime
 
@@ -67,6 +66,8 @@ from thermo_components.domain.results import (
     extract_scalar_density_value,
 )
 from thermo_components.adapters.thermo import ThermoGateway
+from thermo_components.adapters.packaging import RuntimeResourceLocator
+from thermo_components.adapters.persistence import SqliteLhvRepository
 from thermo_components.application.dto import (
     DeriveCompositionRequest,
     FlowConversionRequest,
@@ -86,34 +87,13 @@ from thermo_components.application.use_cases import (
 MixtureCalculator = ThermoGateway
 
 def load_lhv_data(db_path='lhv_data.db'):
-    """Loads LHV data from the SQLite database and returns it."""
-    loaded_data = {}
-    if not os.path.exists(db_path):
-        print(f"Warning: LHV Database file not found at {db_path}. LHV calculations will not be available.")
-        return loaded_data
-
-    conn = None
-    try:
-        conn = sqlite3.connect(db_path)
-        cursor = conn.cursor()
-        cursor.execute("SELECT component_name, lhv_mj_nm3 FROM lhv_values")
-        rows = cursor.fetchall()
-        for row in rows:
-            loaded_data[row[0]] = row[1]
-        print(f"Successfully loaded {len(loaded_data)} LHV entries from {db_path}.")
-    except sqlite3.Error as e:
-        print(f"Failed to load LHV data from database: {e}")
-    finally:
-        if conn:
-            conn.close()
-    return loaded_data
+    """Load LHV data through the SQLite persistence adapter."""
+    return SqliteLhvRepository(db_path).load_all()
 
 # Helper to find resource files in both dev and PyInstaller bundle
 def resource_path(relative_path):
-    """ Get absolute path to resource, works for dev and for PyInstaller """
-    if hasattr(sys, '_MEIPASS'):
-        return os.path.join(sys._MEIPASS, relative_path)
-    return os.path.join(os.path.abspath("."), relative_path)
+    """Resolve a resource in source mode or a PyInstaller bundle."""
+    return str(RuntimeResourceLocator().resolve(relative_path))
 
 
 def get_excel_number_format(unit: str) -> str:
@@ -1339,8 +1319,12 @@ def main():
 
     #app.setStyle(QStyleFactory.create("WindowsVista"))
 
-    # Load the LHV data before creating the window
-    lhv_data_for_app = load_lhv_data(resource_path('lhv_data.db'))
+    # Resolve and load reference data before creating the window.
+    resource_locator = RuntimeResourceLocator()
+    lhv_repository = SqliteLhvRepository(
+        resource_locator.resolve("lhv_data.db")
+    )
+    lhv_data_for_app = lhv_repository.load_all()
 
     # Create and show the main window, passing LHV data
     window = MainWindow(lhv_data=lhv_data_for_app)
