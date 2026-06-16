@@ -14,12 +14,12 @@ The objective is not "DDD for its own sake." The objective is to isolate the eng
 
 ## Current State
 
-Phases 1, 2, and 3 have extracted framework-free rules, application workflows, thermodynamics integration, LHV persistence, resource location, and Excel report export. Phase 4 has started by extracting the Qt worker bridge, calculation input collector, warning-banner controller, composition-table controller, report-export controller, and results-list presenter. The following responsibilities still live in [density.py](../density.py):
+Phases 1, 2, and 3 have extracted framework-free rules, application workflows, thermodynamics integration, LHV persistence, resource location, and Excel report export. Phase 4 has started by extracting the Qt worker bridge, calculation input collector, warning-banner controller, composition-table controller, report-export controller, desktop dependency composition, and results-list presenter. The following responsibilities still live in [density.py](../density.py):
 
 - Qt controller logic and thread wiring
 - remaining PyQt widget workflow coordination
 - report export request assembly
-- startup and dependency composition
+- compatibility launcher and `MainWindow` hosting
 
 The extracted domain modules currently own:
 
@@ -150,8 +150,7 @@ src/thermo_components/
     packaging/
       resource_locator.py
   bootstrap/
-    container.py
-    main.py
+    desktop.py
 ```
 
 ## Core Domain Types
@@ -280,7 +279,7 @@ The current module should be decomposed as follows:
 | Composition table setup, basis styling, total validation, row/list mutation, and normalization table rendering | Extracted | `adapters/ui/composition_table.py` |
 | Remaining UI state and rendering | `MainWindow` plus extracted UI controllers | `adapters/ui/qt_main_window.py`, additional presenters/controllers |
 | Resource lookup | Extracted; compatibility wrapper remains | `application/ports/resources.py`, `adapters/packaging/resource_locator.py` |
-| Startup composition | `main` | `bootstrap/main.py` |
+| Desktop dependency composition | Extracted; compatibility launcher remains | `bootstrap/desktop.py` |
 
 ## Dependency Rules
 

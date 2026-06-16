@@ -13,6 +13,7 @@
 - Moved composition row/list add, remove, duplicate, and clear widget mutations into the composition-table UI controller.
 - Moved normalization active-column read/write and success feedback into the composition-table UI controller.
 - Moved report export path selection, export dialogs, and optional file opening into `adapters/ui/report_controller.py`.
+- Added a desktop bootstrap composition root for concrete adapters, use cases, LHV data loading, and report-controller factories.
 
 ### 2026-06-15
 - Started refactor Phase 3 by adding the application-owned `ThermoPropertyGateway` port.

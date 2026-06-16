@@ -4,7 +4,7 @@ Thermo Components is a PyQt6 desktop application for calculating thermodynamic p
 
 ## Status
 
-The application works today as a single-user desktop tool. Pure rules live in `src/thermo_components/domain`, workflow orchestration and ports live in `src/thermo_components/application`, and external thermodynamics, SQLite, Excel, packaging, and several Qt UI concerns live under `src/thermo_components/adapters`. The main PyQt window and startup composition are still primarily hosted by [density.py](density.py).
+The application works today as a single-user desktop tool. Pure rules live in `src/thermo_components/domain`, workflow orchestration and ports live in `src/thermo_components/application`, and external thermodynamics, SQLite, Excel, packaging, and several Qt UI concerns live under `src/thermo_components/adapters`. Desktop dependency composition lives in `src/thermo_components/bootstrap`; the main PyQt window and compatibility launcher are still hosted by [density.py](density.py).
 
 ## Features
 
@@ -80,7 +80,7 @@ The target design is a practical hexagonal architecture:
 - Adapters will isolate PyQt, `thermo`, SQLite, Excel, and packaging concerns.
 - The current UI should remain functional throughout the migration; this is an incremental refactor, not a rewrite branch.
 
-Phases 1, 2, and 3 are complete, and Phase 4 is in progress. The domain package owns pure rules, application use cases coordinate workflows through formal ports, and thermodynamics, SQLite LHV persistence, Excel reporting, and resource lookup are isolated in adapters. The Qt worker bridge, result-list presenter, calculation input collector, warning-banner controller, composition-table setup/basis/total/row/normalization controller, and report-export controller have been extracted; the remaining Phase 4 work is to keep splitting `MainWindow` into clearer controller/presenter boundaries.
+Phases 1, 2, and 3 are complete, and Phase 4 is in progress. The domain package owns pure rules, application use cases coordinate workflows through formal ports, and thermodynamics, SQLite LHV persistence, Excel reporting, resource lookup, desktop dependency composition, and several Qt controllers are isolated outside the launcher. The remaining Phase 4 work is to keep shrinking `MainWindow` into clearer controller/presenter boundaries.
 
 ## Development Notes
 

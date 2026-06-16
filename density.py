@@ -2,9 +2,12 @@ import sys
 from pathlib import Path
 
 from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QComboBox, QListWidget,
-    QPushButton, QGridLayout, QVBoxLayout, QTableWidget,
-    QTableWidgetItem, QMessageBox, QHBoxLayout, QButtonGroup, QRadioButton, QStyleFactory
+    QApplication,
+    QButtonGroup,
+    QMainWindow,
+    QMessageBox,
+    QStyleFactory,
+    QTableWidgetItem,
 )
 from PyQt6.QtCore import Qt, QTimer, QThread
 from PyQt6.QtGui import QColor
@@ -63,15 +66,11 @@ from thermo_components.domain.results import (
     extract_scalar_density_value,
 )
 from thermo_components.adapters.thermo import ThermoGateway
-from thermo_components.adapters.packaging import RuntimeResourceLocator
-from thermo_components.adapters.persistence import SqliteLhvRepository
-from thermo_components.adapters.reporting import OpenPyxlReportExporter
 from thermo_components.adapters.ui import (
     CalculationWorker,
     ComponentAddStatus,
     ComponentRemoveStatus,
     CompositionTableController,
-    QtReportExportController,
     ThermoWarningBannerController,
     build_result_list_items,
     collect_property_calculation_request,
@@ -86,29 +85,27 @@ from thermo_components.application.dto import (
     ReportPreparationRequest,
     coerce_property_response,
 )
-from thermo_components.application.use_cases import (
-    CalculatePropertiesUseCase,
-    ConvertFlowUseCase,
-    DeriveCompositionUseCase,
-    NormalizeCompositionUseCase,
-    PrepareReportUseCase,
+from thermo_components.bootstrap import (
+    build_desktop_dependencies,
+    load_lhv_data as bootstrap_load_lhv_data,
+    resource_path as bootstrap_resource_path,
 )
 
 MixtureCalculator = ThermoGateway
 
 def load_lhv_data(db_path='lhv_data.db'):
     """Load LHV data through the SQLite persistence adapter."""
-    return SqliteLhvRepository(db_path).load_all()
+    return bootstrap_load_lhv_data(db_path)
 
 # Helper to find resource files in both dev and PyInstaller bundle
 def resource_path(relative_path):
     """Resolve a resource in source mode or a PyInstaller bundle."""
-    return str(RuntimeResourceLocator().resolve(relative_path))
+    return bootstrap_resource_path(relative_path)
 
 
 # --- MainWindow Class (Modified for gui.py) ---
 class MainWindow(QMainWindow):
-    def __init__(self, lhv_data):
+    def __init__(self, lhv_data=None, dependencies=None):
         super().__init__()
 
         # --- Set up the UI from Designer ---
@@ -125,23 +122,30 @@ class MainWindow(QMainWindow):
         self.progress_animation_start_time = 0
         self.progress_animation_start_value = 0
 
-        # --- Store LHV data and calculator instance ---
-        self.lhv_database = lhv_data
-        self.lhv_data_loaded = bool(self.lhv_database)
-        self.calculator = MixtureCalculator()
-        self.calculate_properties_use_case = CalculatePropertiesUseCase(
-            self.calculator,
-            self.lhv_database,
-        )
-        self.convert_flow_use_case = ConvertFlowUseCase()
-        self.derive_composition_use_case = DeriveCompositionUseCase()
-        self.normalize_composition_use_case = NormalizeCompositionUseCase()
-        self.prepare_report_use_case = PrepareReportUseCase()
-        self.report_exporter = OpenPyxlReportExporter()
-        self.report_export_controller = QtReportExportController(
-            self,
-            self.report_exporter,
+        dependencies = dependencies or build_desktop_dependencies(
+            lhv_data={} if lhv_data is None else lhv_data,
             source_base_dir=Path(__file__).resolve().parent,
+        )
+
+        # --- Store LHV data and calculator instance ---
+        self.dependencies = dependencies
+        self.lhv_database = dependencies.lhv_database
+        self.lhv_data_loaded = bool(self.lhv_database)
+        self.calculator = dependencies.calculator
+        self.calculate_properties_use_case = (
+            dependencies.calculate_properties_use_case
+        )
+        self.convert_flow_use_case = dependencies.convert_flow_use_case
+        self.derive_composition_use_case = (
+            dependencies.derive_composition_use_case
+        )
+        self.normalize_composition_use_case = (
+            dependencies.normalize_composition_use_case
+        )
+        self.prepare_report_use_case = dependencies.prepare_report_use_case
+        self.report_exporter = dependencies.report_exporter
+        self.report_export_controller = (
+            dependencies.report_export_controller_factory(self)
         )
         self.last_result_data = None
         self.density_actual_kg_m3 = None
@@ -751,15 +755,13 @@ def main():
 
     #app.setStyle(QStyleFactory.create("WindowsVista"))
 
-    # Resolve and load reference data before creating the window.
-    resource_locator = RuntimeResourceLocator()
-    lhv_repository = SqliteLhvRepository(
-        resource_locator.resolve("lhv_data.db")
+    # Build concrete adapters and use cases before creating the window.
+    dependencies = build_desktop_dependencies(
+        source_base_dir=Path(__file__).resolve().parent,
     )
-    lhv_data_for_app = lhv_repository.load_all()
 
-    # Create and show the main window, passing LHV data
-    window = MainWindow(lhv_data=lhv_data_for_app)
+    # Create and show the main window, passing composed dependencies.
+    window = MainWindow(dependencies=dependencies)
     window.show()
 
     sys.exit(app.exec())
