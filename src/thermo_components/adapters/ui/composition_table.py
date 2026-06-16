@@ -1,5 +1,6 @@
 """Qt controller for composition-table rendering and total validation."""
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from enum import Enum
 
@@ -11,6 +12,7 @@ from PyQt6.QtWidgets import QHeaderView, QTableWidgetItem
 COMPONENT_COLUMN = 0
 MOLE_PERCENT_COLUMN = 1
 WEIGHT_PERCENT_COLUMN = 2
+NORMALIZATION_SUCCESS_MESSAGE = "Composition normalized to 100%."
 
 
 @dataclass(frozen=True)
@@ -195,6 +197,48 @@ class CompositionTableController:
             valid_input=valid_input,
             is_total_ok=is_total_ok,
         )
+
+    def read_active_percentages_for_normalization(self) -> tuple[float, ...]:
+        """Read component percentages from the active basis column."""
+        active_col, _ = self.active_inactive_columns()
+        table = self.ui.tableWidget
+        total_row = table.rowCount() - 1
+        values: list[float] = []
+
+        for row in range(total_row):
+            item = table.item(row, active_col)
+            try:
+                value = (
+                    float(item.text())
+                    if item and item.text().strip()
+                    else 0.0
+                )
+            except ValueError:
+                value = 0.0
+            values.append(value)
+
+        return tuple(values)
+
+    def write_normalized_active_percentages(
+        self,
+        percentages: Iterable[float],
+    ) -> None:
+        """Write normalized percentages into the active basis column."""
+        active_col, _ = self.active_inactive_columns()
+        table = self.ui.tableWidget
+
+        table.blockSignals(True)
+        try:
+            for row, value in enumerate(percentages):
+                item = table.item(row, active_col)
+                if item is not None:
+                    item.setText(f"{value:.4f}")
+        finally:
+            table.blockSignals(False)
+
+    def show_normalization_success(self) -> None:
+        if hasattr(self.ui, "results_list"):
+            self.ui.results_list.addItem(NORMALIZATION_SUCCESS_MESSAGE)
 
     def add_selected_component(self) -> ComponentAddResult:
         """Add the selected component to the list and table widgets."""

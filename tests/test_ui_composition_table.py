@@ -176,3 +176,40 @@ def test_clear_all_removes_component_rows_and_resets_selection(main_window):
     assert main_window.ui.comboBox_select_temperature.currentText() == "0 °C"
     assert main_window.ui.comboBox_select_pressure.currentText() == "1 atm"
     assert main_window.ui.radioButton_mol_percent.isChecked()
+
+
+def test_normalize_composition_updates_active_column_and_success_message(
+    main_window,
+):
+    _add_component(main_window, "methane")
+    _add_component(main_window, "ethane")
+    table = main_window.ui.tableWidget
+
+    table.item(0, 1).setText("40")
+    table.item(1, 1).setText("40")
+
+    main_window.normalize_composition()
+
+    assert float(table.item(0, 1).text()) == pytest.approx(50.0)
+    assert float(table.item(1, 1).text()) == pytest.approx(50.0)
+    assert table.item(2, 1).text() == "100.0000"
+    assert main_window.ui.results_list.item(
+        main_window.ui.results_list.count() - 1
+    ).text() == "Composition normalized to 100%."
+
+
+def test_normalize_composition_zero_total_warns_without_success_message(
+    main_window,
+    monkeypatch,
+):
+    warnings = []
+    monkeypatch.setattr(
+        "density.QMessageBox.warning",
+        lambda parent, title, message: warnings.append((title, message)),
+    )
+    _add_component(main_window, "methane")
+
+    main_window.normalize_composition()
+
+    assert warnings == [("Normalize", "Cannot normalize: total is zero.")]
+    assert main_window.ui.results_list.count() == 0

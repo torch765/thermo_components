@@ -696,44 +696,21 @@ class MainWindow(QMainWindow):
 
     def normalize_composition(self):
         """Normalize the active composition column (mol% or wt%) so the sum is 100%."""
-        # Determine active column
-        active_col = 1 if self.ui.radioButton_mol_percent.isChecked() else 2
-        row_count = self.ui.tableWidget.rowCount()
-        total_row = row_count - 1
-
-        # Gather values from the active column (excluding total row)
-        values = []
-        for row in range(total_row):
-            item = self.ui.tableWidget.item(row, active_col)
-            try:
-                val = float(item.text()) if item and item.text().strip() else 0.0
-            except ValueError:
-                val = 0.0
-            values.append(val)
-
+        values = self.composition_table.read_active_percentages_for_normalization()
         try:
             response = self.normalize_composition_use_case.execute(
-                NormalizeCompositionRequest(percentages=tuple(values))
+                NormalizeCompositionRequest(percentages=values)
             )
         except ValueError:
             QMessageBox.warning(self, "Normalize", "Cannot normalize: total is zero.")
             return
-        norm_values = response.percentages
 
-        # Block signals to avoid recursion during update
-        self.ui.tableWidget.blockSignals(True)
-        # Set the normalized values in the table
-        for row, norm_val in enumerate(norm_values):
-            item = self.ui.tableWidget.item(row, active_col)
-            if item:
-                item.setText(f"{norm_val:.4f}")
-        self.ui.tableWidget.blockSignals(False)
-
+        self.composition_table.write_normalized_active_percentages(
+            response.percentages
+        )
         self.invalidate_results()
         self.update_table_total()
-        # Optionally, provide user feedback in the results list
-        if hasattr(self.ui, 'results_list'):
-            self.ui.results_list.addItem("Composition normalized to 100%.")
+        self.composition_table.show_normalization_success()
 
     def on_temperature_or_pressure_changed(self):
         """Clear the results_list when temperature or pressure is changed."""
