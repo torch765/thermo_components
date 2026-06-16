@@ -1,5 +1,11 @@
 ## DEVLOG
 
+### 2026-06-16
+- Completed refactor Phase 3C by adding a `ReportExporter` port and OpenPyXL reporting adapter.
+- Moved Excel workbook layout, formatting, and file writing out of `density.py`.
+- Reduced `MainWindow.export_results_to_excel` to report request assembly, user messaging, and optional file opening.
+- Added report-export adapter tests and enforced the OpenPyXL import boundary.
+
 ### 2026-06-15
 - Started refactor Phase 3 by adding the application-owned `ThermoPropertyGateway` port.
 - Moved PRMIX and IAPWS95 calculations from `density.py` into `adapters/thermo/thermo_gateway.py`.

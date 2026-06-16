@@ -14,11 +14,11 @@ The objective is not "DDD for its own sake." The objective is to isolate the eng
 
 ## Current State
 
-Phases 1, 2, 3A, and 3B have extracted framework-free rules, application workflows, thermodynamics integration, LHV persistence, and resource location. The following responsibilities still live in [density.py](../density.py):
+Phases 1, 2, and 3 have extracted framework-free rules, application workflows, thermodynamics integration, LHV persistence, resource location, and Excel report export. The following responsibilities still live in [density.py](../density.py):
 
 - Qt thread and signal setup
 - PyQt widget state and rendering
-- Excel export
+- report export button coordination and user messaging
 - startup and dependency composition
 
 The extracted domain modules currently own:
@@ -41,6 +41,8 @@ The application layer currently owns:
 `CalculatePropertiesUseCase` now depends on the application-owned `ThermoPropertyGateway` port. `ThermoGateway` implements that contract in `adapters/thermo` and isolates all direct `thermo` and `chemicals` imports. `density.py` retains `MixtureCalculator` only as a compatibility alias.
 
 Startup resolves `lhv_data.db` through the application-owned `ResourceLocator` port and loads it through `LhvRepository`. `RuntimeResourceLocator` isolates PyInstaller bundle detection, while `SqliteLhvRepository` owns all runtime and seed-script SQL access.
+
+Report export depends on the application-owned `ReportExporter` port. `OpenPyxlReportExporter` owns workbook layout, formatting, and all direct `openpyxl` imports.
 
 The remaining monolith still creates predictable problems:
 
@@ -126,13 +128,14 @@ src/thermo_components/
     dto.py
     ports/
       persistence.py
+      reporting.py
       resources.py
       thermo.py
     use_cases/
       calculate_properties.py
       convert_flow.py
       normalize_composition.py
-      export_report.py
+      prepare_report.py
   adapters/
     ui/
       qt_main_window.py
@@ -268,7 +271,7 @@ The current module should be decomposed as follows:
 | Report projection | Extracted | `application/use_cases/prepare_report.py` |
 | Qt thread bridge | `CalculationWorker` | `adapters/ui/qt_worker.py` |
 | `thermo` integration | Extracted; compatibility alias remains | `application/ports/thermo.py`, `adapters/thermo/thermo_gateway.py` |
-| Excel export | `MainWindow.export_results_to_excel` | `adapters/reporting/openpyxl_report_exporter.py` |
+| Excel export | Extracted; button coordination remains | `application/ports/reporting.py`, `adapters/reporting/openpyxl_report_exporter.py` |
 | LHV DB loading | Extracted; compatibility wrapper remains | `application/ports/persistence.py`, `adapters/persistence/sqlite_lhv_repository.py` |
 | UI state and rendering | `MainWindow` | `adapters/ui/qt_main_window.py`, `adapters/ui/presenters.py` |
 | Resource lookup | Extracted; compatibility wrapper remains | `application/ports/resources.py`, `adapters/packaging/resource_locator.py` |

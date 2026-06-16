@@ -1,6 +1,7 @@
 import sys
 import os # To check if DB file exists
 from datetime import datetime
+from pathlib import Path
 
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QComboBox, QListWidget,
@@ -68,10 +69,14 @@ from thermo_components.domain.results import (
 from thermo_components.adapters.thermo import ThermoGateway
 from thermo_components.adapters.packaging import RuntimeResourceLocator
 from thermo_components.adapters.persistence import SqliteLhvRepository
+from thermo_components.adapters.reporting import OpenPyxlReportExporter
 from thermo_components.application.dto import (
     DeriveCompositionRequest,
     FlowConversionRequest,
     NormalizeCompositionRequest,
+    ReportCompositionRow,
+    ReportConditionRow,
+    ReportExportRequest,
     PropertyCalculationRequest,
     ReportPreparationRequest,
     coerce_property_response,
@@ -94,19 +99,6 @@ def load_lhv_data(db_path='lhv_data.db'):
 def resource_path(relative_path):
     """Resolve a resource in source mode or a PyInstaller bundle."""
     return str(RuntimeResourceLocator().resolve(relative_path))
-
-
-def get_excel_number_format(unit: str) -> str:
-    """Return a sensible Excel number format for the given engineering unit."""
-    if unit in {"Mol %", "Wt %"}:
-        return "0.0000"
-    if unit == "kg/m³":
-        return "0.000"
-    if unit in {"GJ/Nm³", "MMBtu/Nm³", "MMkcal/Nm³", "GJ/kg", "MMBtu/kg", "MMkcal/kg"}:
-        return "0.0000"
-    if unit:
-        return "0.00"
-    return "General"
 
 
 # Step 1: Worker class for threaded calculation
@@ -161,6 +153,7 @@ class MainWindow(QMainWindow):
         self.derive_composition_use_case = DeriveCompositionUseCase()
         self.normalize_composition_use_case = NormalizeCompositionUseCase()
         self.prepare_report_use_case = PrepareReportUseCase()
+        self.report_exporter = OpenPyxlReportExporter()
         self.last_result_data = None
         self.density_actual_kg_m3 = None
         self.density_normal_kg_m3 = None
@@ -418,26 +411,24 @@ class MainWindow(QMainWindow):
             })
         return rows
 
-    def build_report_warning_rows(self, result_data):
-        """Build structured warning rows for the export report."""
+    def build_report_projection(self, result_data):
+        """Build the typed report projection used by display and export paths."""
         response = coerce_property_response(result_data)
-        projection = self.prepare_report_use_case.execute(
+        return self.prepare_report_use_case.execute(
             ReportPreparationRequest(
                 calculation=response,
                 lhv_data_available=self.lhv_data_loaded,
             )
         )
+
+    def build_report_warning_rows(self, result_data):
+        """Build structured warning rows for the export report."""
+        projection = self.build_report_projection(result_data)
         return [row.to_dict() for row in projection.warning_rows]
 
     def build_results_rows(self, result_data):
         """Build structured result rows for report export without scraping the UI."""
-        response = coerce_property_response(result_data)
-        projection = self.prepare_report_use_case.execute(
-            ReportPreparationRequest(
-                calculation=response,
-                lhv_data_available=self.lhv_data_loaded,
-            )
-        )
+        projection = self.build_report_projection(result_data)
         return [row.to_dict() for row in projection.result_rows]
 
     def export_results_to_excel(self):
@@ -446,9 +437,30 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "Print Results", "No calculation results available. Please click Go first.")
             return None
 
+        timestamp = datetime.now()
+        report_path = Path(
+            self.get_export_base_dir(),
+            self.build_report_filename(timestamp),
+        )
+        export_request = ReportExportRequest(
+            report_path=report_path,
+            exported_at=timestamp,
+            conditions=tuple(
+                ReportConditionRow(setting, value)
+                for setting, value in self.get_current_conditions()
+            ),
+            input_rows=tuple(
+                ReportCompositionRow(
+                    row["Component"],
+                    row["Mol %"],
+                    row["Wt %"],
+                )
+                for row in self.get_input_composition_rows()
+            ),
+            projection=self.build_report_projection(self.last_result_data),
+        )
         try:
-            from openpyxl import Workbook
-            from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+            exported_path = self.report_exporter.export(export_request)
         except ImportError:
             QMessageBox.warning(
                 self,
@@ -458,147 +470,19 @@ class MainWindow(QMainWindow):
                 "Command:\npython -m pip install openpyxl",
             )
             return None
-
-        timestamp = datetime.now()
-        report_path = os.path.join(self.get_export_base_dir(), self.build_report_filename(timestamp))
-        workbook = Workbook()
-        worksheet = workbook.active
-        worksheet.title = "Results"
-        worksheet.freeze_panes = "A5"
-
-        thin_side = Side(style="thin", color="B7C9E2")
-        table_border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
-        title_font = Font(size=16, bold=True)
-        subtitle_font = Font(italic=True, color="666666")
-        section_font = Font(size=11, bold=True)
-        header_font = Font(bold=True, color="FFFFFF")
-        section_fill = PatternFill("solid", fgColor="D9EAF7")
-        header_fill = PatternFill("solid", fgColor="5B9BD5")
-        left_alignment = Alignment(horizontal="left", vertical="center", wrap_text=True)
-        right_alignment = Alignment(horizontal="right", vertical="center")
-        center_alignment = Alignment(horizontal="center", vertical="center")
-
-        worksheet.merge_cells("A1:D1")
-        worksheet["A1"] = "THERMO CALCULATOR REPORT"
-        worksheet["A1"].font = title_font
-        worksheet["A1"].alignment = center_alignment
-        worksheet.row_dimensions[1].height = 24
-
-        worksheet.merge_cells("A2:D2")
-        worksheet["A2"] = f"Exported: {timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
-        worksheet["A2"].font = subtitle_font
-        worksheet["A2"].alignment = center_alignment
-
-        def style_row(row_index, max_col=4, fill=None, font=None):
-            for col_index in range(1, max_col + 1):
-                cell = worksheet.cell(row=row_index, column=col_index)
-                cell.border = table_border
-                cell.alignment = left_alignment
-                if fill is not None:
-                    cell.fill = fill
-                if font is not None:
-                    cell.font = font
-
-        def write_section_header(row_index, title):
-            worksheet.cell(row=row_index, column=1, value=title)
-            style_row(row_index, fill=section_fill, font=section_font)
-            return row_index + 1
-
-        def write_table_header(row_index, headers):
-            for col_index, header in enumerate(headers, start=1):
-                cell = worksheet.cell(row=row_index, column=col_index, value=header)
-                cell.font = header_font
-                cell.fill = header_fill
-                cell.border = table_border
-                cell.alignment = left_alignment
-            return row_index + 1
-
-        row_index = 4
-        row_index = write_section_header(row_index, "Conditions")
-        row_index = write_table_header(row_index, ["Setting", "Value"])
-        for setting, value in self.get_current_conditions():
-            worksheet.cell(row=row_index, column=1, value=setting)
-            value_cell = worksheet.cell(row=row_index, column=2, value=value)
-            for col_index in range(1, 3):
-                cell = worksheet.cell(row=row_index, column=col_index)
-                cell.border = table_border
-                cell.alignment = left_alignment
-            value_cell.alignment = left_alignment
-            row_index += 1
-
-        row_index += 1
-        row_index = write_section_header(row_index, "Input Composition")
-        row_index = write_table_header(row_index, ["Component", "Mol %", "Wt %"])
-        for composition_row in self.get_input_composition_rows():
-            worksheet.cell(row=row_index, column=1, value=composition_row["Component"])
-            for column_index, key in enumerate(["Mol %", "Wt %"], start=2):
-                value = composition_row[key]
-                cell = worksheet.cell(row=row_index, column=column_index, value=value if value != "" else None)
-                cell.border = table_border
-                if isinstance(value, (int, float)):
-                    cell.alignment = right_alignment
-                    cell.number_format = get_excel_number_format(key)
-                else:
-                    cell.alignment = left_alignment
-            worksheet.cell(row=row_index, column=1).border = table_border
-            worksheet.cell(row=row_index, column=1).alignment = left_alignment
-            row_index += 1
-
-        warning_rows = self.build_report_warning_rows(self.last_result_data)
-        if warning_rows:
-            row_index += 1
-            row_index = write_section_header(row_index, "Warnings")
-            row_index = write_table_header(row_index, ["Warning Type", "Details"])
-            for warning_row in warning_rows:
-                worksheet.cell(row=row_index, column=1, value=warning_row["Warning Type"])
-                worksheet.cell(row=row_index, column=2, value=warning_row["Details"])
-                for col_index in range(1, 3):
-                    cell = worksheet.cell(row=row_index, column=col_index)
-                    cell.border = table_border
-                    cell.alignment = left_alignment
-                row_index += 1
-
-        row_index += 1
-        row_index = write_section_header(row_index, "Results")
-        row_index = write_table_header(row_index, ["Property", "Value", "Unit", "Notes"])
-        for result_row in self.build_results_rows(self.last_result_data):
-            worksheet.cell(row=row_index, column=1, value=result_row["Property"])
-            value = result_row["Value"]
-            value_cell = worksheet.cell(row=row_index, column=2, value=value if value != "" else None)
-            worksheet.cell(row=row_index, column=3, value=result_row["Unit"])
-            worksheet.cell(row=row_index, column=4, value=result_row["Notes"])
-
-            for col_index in range(1, 5):
-                cell = worksheet.cell(row=row_index, column=col_index)
-                cell.border = table_border
-                cell.alignment = left_alignment
-
-            if isinstance(value, (int, float)):
-                value_cell.alignment = right_alignment
-                value_cell.number_format = get_excel_number_format(result_row["Unit"])
-
-            row_index += 1
-
-        worksheet.column_dimensions["A"].width = 32
-        worksheet.column_dimensions["B"].width = 22
-        worksheet.column_dimensions["C"].width = 18
-        worksheet.column_dimensions["D"].width = 52
-
-        try:
-            workbook.save(report_path)
         except Exception as exc:
             QMessageBox.critical(self, "Print Results", f"Failed to save Excel report:\n{exc}")
             return None
 
-        QMessageBox.information(self, "Print Results", f"Excel report saved to:\n{report_path}")
+        QMessageBox.information(self, "Print Results", f"Excel report saved to:\n{exported_path}")
 
         if hasattr(os, "startfile"):
             try:
-                os.startfile(report_path)
+                os.startfile(exported_path)
             except OSError:
                 pass
 
-        return report_path
+        return str(exported_path)
 
     def setup_flow_tab(self):
         """Initialize the Flow tab controls from the current UI definition."""

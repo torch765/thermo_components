@@ -4,7 +4,7 @@ Thermo Components is a PyQt6 desktop application for calculating thermodynamic p
 
 ## Status
 
-The application works today as a single-user desktop tool. Pure rules live in `src/thermo_components/domain`, workflow orchestration and ports live in `src/thermo_components/application`, and external thermodynamics, SQLite, and packaging concerns live under `src/thermo_components/adapters`. The PyQt UI, Excel reporting, and startup composition are still primarily hosted by [density.py](density.py).
+The application works today as a single-user desktop tool. Pure rules live in `src/thermo_components/domain`, workflow orchestration and ports live in `src/thermo_components/application`, and external thermodynamics, SQLite, Excel, and packaging concerns live under `src/thermo_components/adapters`. The PyQt UI and startup composition are still primarily hosted by [density.py](density.py).
 
 ## Features
 
@@ -65,7 +65,7 @@ thermo_components/
     thermo_components/
       domain/          # Extracted framework-free business rules
       application/     # Typed DTOs and workflow use cases
-      adapters/        # Thermo, SQLite, and packaging integrations
+      adapters/        # Thermo, SQLite, Excel, and packaging integrations
       bootstrap/       # Reserved for dependency wiring
   tests/               # Characterization tests
   docs/               # Architecture and roadmap documents
@@ -80,7 +80,7 @@ The target design is a practical hexagonal architecture:
 - Adapters will isolate PyQt, `thermo`, SQLite, Excel, and packaging concerns.
 - The current UI should remain functional throughout the migration; this is an incremental refactor, not a rewrite branch.
 
-Phases 1 and 2 are complete, and Phase 3 is in progress. The domain package owns pure rules, application use cases coordinate workflows through formal ports, and thermodynamics, SQLite LHV persistence, and resource lookup are isolated in adapters. Excel reporting is the remaining Phase 3 boundary.
+Phases 1, 2, and 3 are complete. The domain package owns pure rules, application use cases coordinate workflows through formal ports, and thermodynamics, SQLite LHV persistence, Excel reporting, and resource lookup are isolated in adapters. Phase 4 will split the Qt layer into clearer controller/presenter boundaries.
 
 ## Development Notes
 

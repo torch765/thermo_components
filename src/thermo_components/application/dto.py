@@ -2,6 +2,8 @@
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from thermo_components.domain.results import extract_scalar_density_value
@@ -272,3 +274,25 @@ class ReportPreparationRequest:
 class ReportProjection:
     result_rows: tuple[ReportResultRow, ...]
     warning_rows: tuple[ReportWarningRow, ...]
+
+
+@dataclass(frozen=True)
+class ReportConditionRow:
+    setting: str
+    value: Any
+
+
+@dataclass(frozen=True)
+class ReportCompositionRow:
+    component: str
+    mole_percent: Any
+    weight_percent: Any
+
+
+@dataclass(frozen=True)
+class ReportExportRequest:
+    report_path: Path
+    exported_at: datetime
+    conditions: tuple[ReportConditionRow, ...]
+    input_rows: tuple[ReportCompositionRow, ...]
+    projection: ReportProjection

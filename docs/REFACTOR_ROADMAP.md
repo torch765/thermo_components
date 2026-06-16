@@ -16,7 +16,7 @@ This roadmap is designed for incremental execution. The application must remain 
 
 ## Phased Plan
 
-Current status: Phases 0, 1, and 2 are complete. Phase 3 is in progress; thermodynamics, LHV persistence, and resource location are isolated.
+Current status: Phases 0, 1, 2, and 3 are complete. Phase 4 is the next implementation phase.
 
 ### Phase 0: Stabilize and Characterize
 
@@ -73,17 +73,14 @@ Exit criteria:
 
 ### Phase 3: Isolate External Dependencies Behind Ports
 
-Status: In progress. Phase 3A and Phase 3B were completed on 2026-06-15.
+Status: Complete as of 2026-06-16.
 
 Deliverables:
 
-- Add ports for thermo properties, LHV lookup, report export, and resource location. Thermo, LHV, and resource ports are complete.
+- Add ports for thermo properties, LHV lookup, report export, and resource location. Complete.
 - Move `MixtureCalculator` logic behind a thermo adapter implementing the thermo gateway port. Complete.
 - Move SQLite access behind an LHV repository adapter. Complete.
-
-Remaining Phase 3 sequence:
-
-1. Add the report-export port and OpenPyXL adapter.
+- Move Excel report generation behind an OpenPyXL report exporter adapter. Complete.
 
 Exit criteria:
 

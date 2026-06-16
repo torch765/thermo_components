@@ -89,3 +89,23 @@ def test_sqlite_dependency_is_confined_to_the_persistence_adapter():
             violations[str(relative_path)] = sorted(sqlite_imports)
 
     assert violations == {}
+
+
+def test_openpyxl_dependency_is_confined_to_the_reporting_adapter():
+    source_paths = [PROJECT_ROOT / "density.py", *PACKAGE_ROOT.rglob("*.py")]
+    violations = {}
+
+    for path in source_paths:
+        openpyxl_imports = imported_root_names(path) & {"openpyxl"}
+        if not openpyxl_imports:
+            continue
+        relative_path = path.relative_to(PROJECT_ROOT)
+        if relative_path.parts[:4] != (
+            "src",
+            "thermo_components",
+            "adapters",
+            "reporting",
+        ):
+            violations[str(relative_path)] = sorted(openpyxl_imports)
+
+    assert violations == {}
