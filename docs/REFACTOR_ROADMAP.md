@@ -16,7 +16,7 @@ This roadmap is designed for incremental execution. The application must remain 
 
 ## Phased Plan
 
-Current status: Phases 0, 1, 2, and 3 are complete. Phase 4 is in progress; the Qt worker bridge, result-list presenter, calculation input collector, warning-banner controller, and composition-table setup/basis/total/row/normalization controller have been extracted.
+Current status: Phases 0, 1, 2, and 3 are complete. Phase 4 is in progress; the Qt worker bridge, result-list presenter, calculation input collector, warning-banner controller, composition-table setup/basis/total/row/normalization controller, and report-export controller have been extracted.
 
 ### Phase 0: Stabilize and Characterize
 
@@ -108,10 +108,11 @@ Completed so far:
 - Moved composition-table setup, active-basis styling, and total validation into `adapters/ui/composition_table.py`.
 - Moved composition row/list add, remove, duplicate, and clear widget mutations into `adapters/ui/composition_table.py`.
 - Moved normalization active-column read/write and success feedback into `adapters/ui/composition_table.py`.
+- Moved report export path selection, export dialogs, and optional file opening into `adapters/ui/report_controller.py`.
 
 Remaining:
 
-- Introduce smaller Qt controller/presenter modules around report actions and remaining `MainWindow` workflow coordination.
+- Introduce smaller Qt controller/presenter modules around remaining `MainWindow` workflow coordination and startup composition.
 
 Exit criteria:
 

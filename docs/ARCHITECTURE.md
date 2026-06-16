@@ -14,11 +14,11 @@ The objective is not "DDD for its own sake." The objective is to isolate the eng
 
 ## Current State
 
-Phases 1, 2, and 3 have extracted framework-free rules, application workflows, thermodynamics integration, LHV persistence, resource location, and Excel report export. Phase 4 has started by extracting the Qt worker bridge, calculation input collector, warning-banner controller, composition-table controller, and results-list presenter. The following responsibilities still live in [density.py](../density.py):
+Phases 1, 2, and 3 have extracted framework-free rules, application workflows, thermodynamics integration, LHV persistence, resource location, and Excel report export. Phase 4 has started by extracting the Qt worker bridge, calculation input collector, warning-banner controller, composition-table controller, report-export controller, and results-list presenter. The following responsibilities still live in [density.py](../density.py):
 
 - Qt controller logic and thread wiring
 - remaining PyQt widget workflow coordination
-- report export button coordination and user messaging
+- report export request assembly
 - startup and dependency composition
 
 The extracted domain modules currently own:
@@ -271,7 +271,8 @@ The current module should be decomposed as follows:
 | Report projection | Extracted | `application/use_cases/prepare_report.py` |
 | Qt thread bridge | Extracted; imported by launcher | `adapters/ui/qt_worker.py` |
 | `thermo` integration | Extracted; compatibility alias remains | `application/ports/thermo.py`, `adapters/thermo/thermo_gateway.py` |
-| Excel export | Extracted; button coordination remains | `application/ports/reporting.py`, `adapters/reporting/openpyxl_report_exporter.py` |
+| Excel export | Extracted | `application/ports/reporting.py`, `adapters/reporting/openpyxl_report_exporter.py` |
+| Qt report export action | Extracted | `adapters/ui/report_controller.py` |
 | LHV DB loading | Extracted; compatibility wrapper remains | `application/ports/persistence.py`, `adapters/persistence/sqlite_lhv_repository.py` |
 | Result-list presentation | Extracted | `adapters/ui/presenters.py` |
 | Calculation input collection | Extracted | `adapters/ui/input_collection.py` |

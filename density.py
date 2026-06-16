@@ -1,6 +1,4 @@
 import sys
-import os # To check if DB file exists
-from datetime import datetime
 from pathlib import Path
 
 from PyQt6.QtWidgets import (
@@ -73,6 +71,7 @@ from thermo_components.adapters.ui import (
     ComponentAddStatus,
     ComponentRemoveStatus,
     CompositionTableController,
+    QtReportExportController,
     ThermoWarningBannerController,
     build_result_list_items,
     collect_property_calculation_request,
@@ -139,6 +138,11 @@ class MainWindow(QMainWindow):
         self.normalize_composition_use_case = NormalizeCompositionUseCase()
         self.prepare_report_use_case = PrepareReportUseCase()
         self.report_exporter = OpenPyxlReportExporter()
+        self.report_export_controller = QtReportExportController(
+            self,
+            self.report_exporter,
+            source_base_dir=Path(__file__).resolve().parent,
+        )
         self.last_result_data = None
         self.density_actual_kg_m3 = None
         self.density_normal_kg_m3 = None
@@ -266,14 +270,11 @@ class MainWindow(QMainWindow):
 
     def get_export_base_dir(self):
         """Return the directory where generated reports should be saved."""
-        if getattr(sys, "frozen", False):
-            return os.path.dirname(sys.executable)
-        return os.path.dirname(os.path.abspath(__file__))
+        return str(self.report_export_controller.get_export_base_dir())
 
-    def build_report_filename(self, timestamp: datetime | None = None):
+    def build_report_filename(self, timestamp=None):
         """Build the timestamped Excel report filename."""
-        timestamp = timestamp or datetime.now()
-        return f"Thermo_Report_{timestamp.strftime('%Y%m%d_%H%M%S')}.xlsx"
+        return self.report_export_controller.build_report_filename(timestamp)
 
     def get_current_conditions(self):
         """Return the currently active calculation conditions for reporting."""
@@ -341,15 +342,13 @@ class MainWindow(QMainWindow):
 
     def export_results_to_excel(self):
         """Export the latest calculation results to a formatted Excel workbook."""
-        if not self.last_result_data:
-            QMessageBox.information(self, "Print Results", "No calculation results available. Please click Go first.")
-            return None
-
-        timestamp = datetime.now()
-        report_path = Path(
-            self.get_export_base_dir(),
-            self.build_report_filename(timestamp),
+        return self.report_export_controller.export_latest_report(
+            has_results=bool(self.last_result_data),
+            build_request=self._build_report_export_request,
         )
+
+    def _build_report_export_request(self, report_path, timestamp):
+        """Build the typed report export request for the latest calculation."""
         export_request = ReportExportRequest(
             report_path=report_path,
             exported_at=timestamp,
@@ -367,30 +366,7 @@ class MainWindow(QMainWindow):
             ),
             projection=self.build_report_projection(self.last_result_data),
         )
-        try:
-            exported_path = self.report_exporter.export(export_request)
-        except ImportError:
-            QMessageBox.warning(
-                self,
-                "Print Results",
-                "Excel export requires the 'openpyxl' package.\n"
-                "Install it in this environment and try again.\n\n"
-                "Command:\npython -m pip install openpyxl",
-            )
-            return None
-        except Exception as exc:
-            QMessageBox.critical(self, "Print Results", f"Failed to save Excel report:\n{exc}")
-            return None
-
-        QMessageBox.information(self, "Print Results", f"Excel report saved to:\n{exported_path}")
-
-        if hasattr(os, "startfile"):
-            try:
-                os.startfile(exported_path)
-            except OSError:
-                pass
-
-        return str(exported_path)
+        return export_request
 
     def setup_flow_tab(self):
         """Initialize the Flow tab controls from the current UI definition."""
