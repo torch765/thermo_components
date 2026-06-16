@@ -4,6 +4,10 @@ from .input_collection import (
     CalculationInputCollection,
     collect_property_calculation_request,
 )
+from .composition_table import (
+    CompositionTableController,
+    CompositionTotalState,
+)
 from .presenters import build_result_list_items
 from .qt_worker import CalculationWorker
 from .warning_banner import ThermoWarningBannerController
@@ -11,6 +15,8 @@ from .warning_banner import ThermoWarningBannerController
 __all__ = [
     "CalculationInputCollection",
     "CalculationWorker",
+    "CompositionTableController",
+    "CompositionTotalState",
     "ThermoWarningBannerController",
     "build_result_list_items",
     "collect_property_calculation_request",

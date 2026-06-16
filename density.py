@@ -6,7 +6,7 @@ from pathlib import Path
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QComboBox, QListWidget,
     QPushButton, QGridLayout, QVBoxLayout, QTableWidget,
-    QTableWidgetItem, QMessageBox, QHeaderView, QHBoxLayout, QButtonGroup, QRadioButton, QStyleFactory
+    QTableWidgetItem, QMessageBox, QHBoxLayout, QButtonGroup, QRadioButton, QStyleFactory
 )
 from PyQt6.QtCore import Qt, QTimer, QThread
 from PyQt6.QtGui import QPalette, QColor
@@ -70,6 +70,7 @@ from thermo_components.adapters.persistence import SqliteLhvRepository
 from thermo_components.adapters.reporting import OpenPyxlReportExporter
 from thermo_components.adapters.ui import (
     CalculationWorker,
+    CompositionTableController,
     ThermoWarningBannerController,
     build_result_list_items,
     collect_property_calculation_request,
@@ -114,6 +115,7 @@ class MainWindow(QMainWindow):
         self.ui.setupUi(self) # Setup the UI onto this QMainWindow
         if hasattr(self.ui, "tabWidget"):
             self.ui.tabWidget.setCurrentIndex(0)
+        self.composition_table = CompositionTableController(self.ui)
 
         # Step 2: Progress bar animation state
         self.progress_timer = None
@@ -166,10 +168,7 @@ class MainWindow(QMainWindow):
 
     def _parse_float_or_zero(self, text: str) -> float:
         """Parse float from a table cell; treat blanks/invalid as 0.0."""
-        try:
-            return float(text) if text and str(text).strip() else 0.0
-        except (TypeError, ValueError):
-            return 0.0
+        return self.composition_table.parse_float_or_zero(text)
 
     def _recalculate_inactive_column(self):
         """Auto-calculate the inactive composition column from the active one.
@@ -470,29 +469,7 @@ class MainWindow(QMainWindow):
 
     def setup_table(self):
         """Set up the composition table headers and initial row."""
-        self.ui.tableWidget.setColumnCount(3)
-        self.ui.tableWidget.setHorizontalHeaderLabels(["Component", "Mol %", "Wt %"])
-        # Set reasonable column widths (adjust as needed)
-        self.ui.tableWidget.setColumnWidth(0, 150)
-        self.ui.tableWidget.setColumnWidth(1, 80)
-        self.ui.tableWidget.setColumnWidth(2, 80)
-        header = self.ui.tableWidget.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive) # Component name resizable
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch) # Stretch % columns
-        header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
-
-        # Add the non-editable "Total" row
-        self.ui.tableWidget.setRowCount(1)
-        total_item = QTableWidgetItem("Total")
-        total_item.setFlags(Qt.ItemFlag.ItemIsEnabled) # Make non-editable
-        self.ui.tableWidget.setItem(0, 0, total_item)
-        # Initialize Total value cells
-        zero_item1 = QTableWidgetItem("0.00")
-        zero_item1.setFlags(Qt.ItemFlag.ItemIsEnabled)
-        self.ui.tableWidget.setItem(0, 1, zero_item1)
-        zero_item2 = QTableWidgetItem("0.00")
-        zero_item2.setFlags(Qt.ItemFlag.ItemIsEnabled)
-        self.ui.tableWidget.setItem(0, 2, zero_item2)
+        self.composition_table.setup_table()
 
 
     def connect_signals(self):
@@ -686,42 +663,7 @@ class MainWindow(QMainWindow):
 
     def on_input_basis_changed(self):
         """Update table column appearance and editability based on radio buttons."""
-        is_mol_basis = self.ui.radioButton_mol_percent.isChecked()
-        active_col = 1 if is_mol_basis else 2
-        inactive_col = 2 if is_mol_basis else 1
-
-        # Block signals temporarily to prevent itemChanged triggers during modification
-        self.ui.tableWidget.blockSignals(True)
-
-        row_count = self.ui.tableWidget.rowCount()
-        total_row = row_count - 1 # Index of the 'Total' row
-
-        for row in range(row_count):
-            active_item = self.ui.tableWidget.item(row, active_col)
-            inactive_item = self.ui.tableWidget.item(row, inactive_col)
-
-            # Ensure items exist (might not for newly added row before full setup)
-            if active_item is None:
-                active_item = QTableWidgetItem("")
-                self.ui.tableWidget.setItem(row, active_col, active_item)
-            if inactive_item is None:
-                inactive_item = QTableWidgetItem("")
-                self.ui.tableWidget.setItem(row, inactive_col, inactive_item)
-
-            # Set background colors
-            active_item.setBackground(QColor("white"))
-            inactive_item.setBackground(QColor("lightGray"))
-
-            # Set flags (editability)
-            if row != total_row: # Component rows
-                active_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEditable)
-                inactive_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable) # Not editable
-            else: # Total row
-                active_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable) # Not editable
-                inactive_item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable) # Not editable
-
-        # Unblock signals
-        self.ui.tableWidget.blockSignals(False)
+        self.composition_table.apply_basis_state()
         # Recalculate derived (inactive) column values and then totals for the active column
         self._recalculate_inactive_column()
         self.invalidate_results()
@@ -749,50 +691,7 @@ class MainWindow(QMainWindow):
 
     def update_table_total(self):
         """Sum the percentages in the active column and update the Total cell."""
-        active_col = 1 if self.ui.radioButton_mol_percent.isChecked() else 2
-        row_count = self.ui.tableWidget.rowCount()
-        total_row_index = row_count - 1
-        total_percent = 0.0
-        valid_input = True
-
-        # Iterate only component rows (up to total_row_index)
-        for r in range(total_row_index):
-            percent_item = self.ui.tableWidget.item(r, active_col)
-            if percent_item:
-                try:
-                    value = float(percent_item.text()) if percent_item.text().strip() else 0.0
-                    total_percent += value
-                except ValueError:
-                     # If text isn't a valid float, treat as error for sum validation
-                     if percent_item.text().strip(): # Only count as error if not empty
-                          valid_input = False
-                     # Don't add to total, let the 100% check fail
-
-        # Update the total cell in the active column
-        total_item_active = self.ui.tableWidget.item(total_row_index, active_col)
-        if not total_item_active:
-            total_item_active = QTableWidgetItem()
-            self.ui.tableWidget.setItem(total_row_index, active_col, total_item_active)
-        total_item_active.setText(f"{total_percent:.4f}")
-        total_item_active.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable) # Ensure non-editable
-
-        # Clear the total cell in the inactive column
-        inactive_col = 2 if active_col == 1 else 1
-        total_item_inactive = self.ui.tableWidget.item(total_row_index, inactive_col)
-        if not total_item_inactive:
-             total_item_inactive = QTableWidgetItem()
-             self.ui.tableWidget.setItem(total_row_index, inactive_col, total_item_inactive)
-        total_item_inactive.setText("") # Clear inactive total
-        total_item_inactive.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
-
-        # Check if total is 100% and input is valid
-        is_total_ok = abs(total_percent - 100.0) < 1e-4 # Use tolerance for float comparison
-        if is_total_ok and valid_input:
-            total_item_active.setForeground(QColor('black'))
-            self.ui.go_button.setEnabled(True)
-        else:
-            total_item_active.setForeground(QColor('red'))
-            self.ui.go_button.setEnabled(False)
+        return self.composition_table.update_table_total()
 
     def calculate_and_display(self):
         """Gather inputs, run calculations, and display results."""

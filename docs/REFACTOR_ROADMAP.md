@@ -16,7 +16,7 @@ This roadmap is designed for incremental execution. The application must remain 
 
 ## Phased Plan
 
-Current status: Phases 0, 1, 2, and 3 are complete. Phase 4 is in progress; the Qt worker bridge, result-list presenter, calculation input collector, and warning-banner controller have been extracted.
+Current status: Phases 0, 1, 2, and 3 are complete. Phase 4 is in progress; the Qt worker bridge, result-list presenter, calculation input collector, warning-banner controller, and composition-table setup/basis/total controller have been extracted.
 
 ### Phase 0: Stabilize and Characterize
 
@@ -105,10 +105,11 @@ Completed so far:
 - Moved result-list formatting into `adapters/ui/presenters.py`.
 - Moved calculation input collection into `adapters/ui/input_collection.py`.
 - Moved thermo warning-banner rendering into `adapters/ui/warning_banner.py`.
+- Moved composition-table setup, active-basis styling, and total validation into `adapters/ui/composition_table.py`.
 
 Remaining:
 
-- Introduce smaller Qt controller/presenter modules around table state and report actions.
+- Introduce smaller Qt controller/presenter modules around composition row add/remove orchestration, normalization UI feedback, and report actions.
 
 Exit criteria:
 
