@@ -155,7 +155,7 @@ Exit criteria:
 
 ### Phase 6: Consolidate and Clean Up
 
-Status: In progress. Phase 6A started on 2026-06-17.
+Status: In progress. Phase 6D completed on 2026-06-17.
 
 Deliverables:
 
@@ -171,11 +171,11 @@ Completed so far:
 - Moved tests to real adapter/bootstrap imports and kept only a focused `density.py` launcher compatibility test.
 - Removed the test-only `QMessageBox` compatibility export from `density.py`.
 - Added a packaging regression test that keeps `density.spec` portable and verifies bundled resource entries remain present.
+- Decided to keep `MainWindow`, `MixtureCalculator`, `load_lhv_data`, and `resource_path` as launcher compatibility aliases for the next public release.
 
 Next:
 
-- Decide whether to keep `MainWindow`, `MixtureCalculator`, `load_lhv_data`, and `resource_path` launcher aliases for the next public release.
-- Close Phase 6 after one final GUI/package smoke decision.
+- Close Phase 6 after one final GUI smoke test on the Phase 6 branch.
 
 Exit criteria:
 

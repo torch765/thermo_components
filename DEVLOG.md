@@ -9,6 +9,7 @@
 - Started Phase 6 by removing stale moved-window imports, making `density.spec` machine-independent, and tightening developer setup notes.
 - Audited launcher compatibility aliases so tests use real package modules directly, while `density.py` keeps only intentional legacy exports.
 - Added a packaging regression test to keep `density.spec` portable and resource files included.
+- Kept `MainWindow`, `MixtureCalculator`, `load_lhv_data`, and `resource_path` as launcher compatibility aliases for the next public release.
 
 ### 2026-06-16
 - Completed refactor Phase 3C by adding a `ReportExporter` port and OpenPyXL reporting adapter.

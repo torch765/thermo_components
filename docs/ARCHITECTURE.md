@@ -41,7 +41,7 @@ The application layer currently owns:
 - composition normalization and inactive-basis derivation workflows
 - report result and warning projection
 
-`CalculatePropertiesUseCase` now depends on the application-owned `ThermoPropertyGateway` port. `ThermoGateway` implements that contract in `adapters/thermo` and isolates all direct `thermo` and `chemicals` imports. `density.py` retains `MixtureCalculator` only as a compatibility alias.
+`CalculatePropertiesUseCase` now depends on the application-owned `ThermoPropertyGateway` port. `ThermoGateway` implements that contract in `adapters/thermo` and isolates all direct `thermo` and `chemicals` imports. For the next public release, `density.py` intentionally remains a compatibility launcher and exports legacy names for `MainWindow`, `MixtureCalculator`, `load_lhv_data`, and `resource_path`.
 
 Startup resolves `lhv_data.db` through the application-owned `ResourceLocator` port and loads it through `LhvRepository`. `RuntimeResourceLocator` isolates PyInstaller bundle detection, while `SqliteLhvRepository` owns all runtime and seed-script SQL access.
 
@@ -51,7 +51,7 @@ The remaining consolidation risks are now narrower:
 
 - Qt adapter code still owns framework coordination and presentation decisions
 - future web-facing workflows may need UI-independent application facades
-- packaging and compatibility aliases still need cleanup before a final release
+- compatibility aliases remain intentionally for the next public release
 
 ## Architectural Style
 
