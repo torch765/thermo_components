@@ -13,13 +13,19 @@ This repository is being converted from a working desktop-script application int
 python -m pip install -r requirements-dev.txt
 ```
 
-3. Run the application:
+3. Run the desktop application:
 
 ```powershell
 python density.py
 ```
 
-4. Run the test suite:
+4. Run the web skeleton:
+
+```powershell
+python -m uvicorn thermo_components.adapters.web.app:app --reload
+```
+
+5. Run the test suite:
 
 ```powershell
 python -m pytest
@@ -59,6 +65,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/REFACTOR_ROADMAP.md](
 - The domain and application import-boundary tests must remain green.
 - Adapter behavior should be covered with focused integration tests where needed.
 - Qt tests should stay narrow and verify controller/presenter wiring rather than widget cosmetics.
+- Web tests should verify routes and adapter boundaries without calling PyQt code.
 - High-risk areas include basis conversion, density reference handling, warning generation, flow conversion, and report row assembly.
 
 ## Documentation Expectations

@@ -33,6 +33,14 @@ python -m pip install -r requirements.txt
 python density.py
 ```
 
+4. Run the current web skeleton:
+
+```powershell
+python -m uvicorn thermo_components.adapters.web.app:app --reload
+```
+
+Then open `http://127.0.0.1:8000/health`.
+
 ## Tests
 
 Install the development dependencies and run the characterization suite:
@@ -68,8 +76,8 @@ thermo_components/
   src/
     thermo_components/
       domain/          # Extracted framework-free business rules
-      application/     # Typed DTOs and workflow use cases
-      adapters/        # Thermo, SQLite, Excel, packaging, and Qt integrations
+      application/     # Typed DTOs, services, and workflow use cases
+      adapters/        # Thermo, SQLite, Excel, packaging, Qt, and web integrations
       bootstrap/       # Desktop dependency composition
   tests/               # Characterization tests
   docs/               # Architecture and roadmap documents
@@ -84,7 +92,7 @@ The target design is a practical hexagonal architecture:
 - Adapters will isolate PyQt, `thermo`, SQLite, Excel, and packaging concerns.
 - The current UI should remain functional throughout the migration; this is an incremental refactor, not a rewrite branch.
 
-Phases 1 through 6 are complete. The domain package owns pure rules, application use cases coordinate workflows through formal ports, and thermodynamics, SQLite LHV persistence, Excel reporting, resource lookup, desktop dependency composition, Qt controllers, and `MainWindow` are isolated outside the launcher. The next architectural target is optional web-readiness work through UI-independent application facades.
+Phases 1 through 6 are complete. The domain package owns pure rules, application use cases coordinate workflows through formal ports, and thermodynamics, SQLite LHV persistence, Excel reporting, resource lookup, desktop dependency composition, Qt controllers, and `MainWindow` are isolated outside the launcher. Web-readiness work has started with a UI-independent calculation session service and a FastAPI skeleton.
 
 ## Development Notes
 

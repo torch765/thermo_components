@@ -1,6 +1,6 @@
 # Web App Design Basis
 
-Status: Accepted for MVP planning, before implementation.
+Status: Accepted for MVP planning. Web Phases 0 through 2 are complete.
 
 ## Purpose
 
@@ -202,7 +202,7 @@ Initial deployment target:
 Expected deployment command:
 
 ```text
-uvicorn thermo_components.adapters.web.app:app --host 0.0.0.0 --port ${PORT:-8000}
+python -m uvicorn thermo_components.adapters.web.app:app --host 0.0.0.0 --port ${PORT:-8000}
 ```
 
 The exact command may need adjustment for App Platform environment variable handling.
@@ -233,10 +233,13 @@ Status: Complete as of 2026-06-17.
 
 ### Web Phase 2: FastAPI Skeleton
 
+Status: Complete as of 2026-06-17.
+
 - Add FastAPI dependency.
 - Add `adapters/web/app.py`.
 - Add `/health`.
 - Add minimal app startup tests.
+- Local command: `python -m uvicorn thermo_components.adapters.web.app:app --reload`.
 
 ### Web Phase 3: Calculation API/Form Handler
 

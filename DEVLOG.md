@@ -13,6 +13,7 @@
 - Closed Phase 6 after a successful GUI smoke test on the Phase 6 branch.
 - Added the web app design basis and ADR for a FastAPI, server-rendered, DigitalOcean App Platform MVP.
 - Completed Web Phase 1 by adding a UI-independent calculation session service that composes calculation and report projection without Qt or FastAPI dependencies.
+- Completed Web Phase 2 by adding FastAPI/Uvicorn dependencies, a web adapter app factory, `GET /health`, web startup tests, and web-framework import-boundary coverage.
 
 ### 2026-06-16
 - Completed refactor Phase 3C by adding a `ReportExporter` port and OpenPyXL reporting adapter.

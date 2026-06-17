@@ -59,7 +59,7 @@ The remaining consolidation risks are now narrower:
 The target is a pragmatic hexagonal architecture with a lean domain model.
 
 ```text
-Driving adapters: Qt / CLI / tests
+Driving adapters: Qt / FastAPI / CLI / tests
                  |
                  v
         Application Use Cases
@@ -135,6 +135,8 @@ src/thermo_components/
       reporting.py
       resources.py
       thermo.py
+    services/
+      calculation_session.py
     use_cases/
       calculate_properties.py
       convert_flow.py
@@ -159,6 +161,8 @@ src/thermo_components/
       openpyxl_report_exporter.py
     packaging/
       resource_locator.py
+    web/
+      app.py
   bootstrap/
     desktop.py
 ```

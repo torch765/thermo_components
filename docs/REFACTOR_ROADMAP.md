@@ -16,7 +16,7 @@ This roadmap is designed for incremental execution. The application must remain 
 
 ## Phased Plan
 
-Current status: Phases 0 through 6 are complete. Web Phase 0 and Web Phase 1 are complete, with web planning captured in `docs/WEB_APP_DESIGN.md` and `docs/adr/0001-web-stack.md`.
+Current status: Phases 0 through 6 are complete. Web Phases 0 through 2 are complete, with web planning captured in `docs/WEB_APP_DESIGN.md` and `docs/adr/0001-web-stack.md`.
 
 ### Phase 0: Stabilize and Characterize
 
@@ -230,12 +230,20 @@ Exit criteria:
 
 ### Web Phase 2: FastAPI Skeleton
 
+Status: Complete as of 2026-06-17.
+
 Deliverables:
 
 - Add FastAPI/Uvicorn dependencies.
 - Add `src/thermo_components/adapters/web/app.py`.
 - Add `/health`.
 - Add basic app startup tests.
+
+Completed:
+
+- Added a FastAPI app factory and module-level Uvicorn entry point.
+- Added `GET /health` for local and deployment smoke tests.
+- Added web startup tests and import-boundary coverage for FastAPI/Uvicorn.
 
 Exit criteria:
 

@@ -7,9 +7,11 @@ import pytest
 FORBIDDEN_IMPORT_ROOTS = {
     "PyQt6",
     "chemicals",
+    "fastapi",
     "openpyxl",
     "sqlite3",
     "thermo",
+    "uvicorn",
 }
 PACKAGE_ROOT = (
     Path(__file__).resolve().parents[1] / "src" / "thermo_components"
@@ -107,5 +109,25 @@ def test_openpyxl_dependency_is_confined_to_the_reporting_adapter():
             "reporting",
         ):
             violations[str(relative_path)] = sorted(openpyxl_imports)
+
+    assert violations == {}
+
+
+def test_web_framework_dependencies_are_confined_to_the_web_adapter():
+    source_paths = [PROJECT_ROOT / "density.py", *PACKAGE_ROOT.rglob("*.py")]
+    violations = {}
+
+    for path in source_paths:
+        web_imports = imported_root_names(path) & {"fastapi", "uvicorn"}
+        if not web_imports:
+            continue
+        relative_path = path.relative_to(PROJECT_ROOT)
+        if relative_path.parts[:4] != (
+            "src",
+            "thermo_components",
+            "adapters",
+            "web",
+        ):
+            violations[str(relative_path)] = sorted(web_imports)
 
     assert violations == {}
