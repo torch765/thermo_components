@@ -82,7 +82,7 @@ The target design is a practical hexagonal architecture:
 - Adapters will isolate PyQt, `thermo`, SQLite, Excel, and packaging concerns.
 - The current UI should remain functional throughout the migration; this is an incremental refactor, not a rewrite branch.
 
-Phases 1 through 5 are complete. The domain package owns pure rules, application use cases coordinate workflows through formal ports, and thermodynamics, SQLite LHV persistence, Excel reporting, resource lookup, desktop dependency composition, Qt controllers, and `MainWindow` are isolated outside the launcher. The next refactor target is consolidation and packaging cleanup.
+Phases 1 through 6 are complete. The domain package owns pure rules, application use cases coordinate workflows through formal ports, and thermodynamics, SQLite LHV persistence, Excel reporting, resource lookup, desktop dependency composition, Qt controllers, and `MainWindow` are isolated outside the launcher. The next architectural target is optional web-readiness work through UI-independent application facades.
 
 ## Development Notes
 

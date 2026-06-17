@@ -16,7 +16,7 @@ This roadmap is designed for incremental execution. The application must remain 
 
 ## Phased Plan
 
-Current status: Phases 0 through 5 are complete. The remaining work is consolidation, packaging cleanup, and any web-readiness refinements that should become application-layer facades rather than Qt adapter code.
+Current status: Phases 0 through 6 are complete. Future web-readiness refinements should become application-layer facades rather than Qt adapter code.
 
 ### Phase 0: Stabilize and Characterize
 
@@ -155,7 +155,7 @@ Exit criteria:
 
 ### Phase 6: Consolidate and Clean Up
 
-Status: In progress. Phase 6D completed on 2026-06-17.
+Status: Complete as of 2026-06-17.
 
 Deliverables:
 
@@ -172,10 +172,11 @@ Completed so far:
 - Removed the test-only `QMessageBox` compatibility export from `density.py`.
 - Added a packaging regression test that keeps `density.spec` portable and verifies bundled resource entries remain present.
 - Decided to keep `MainWindow`, `MixtureCalculator`, `load_lhv_data`, and `resource_path` as launcher compatibility aliases for the next public release.
+- Confirmed the Phase 6 branch with a final GUI smoke test.
 
 Next:
 
-- Close Phase 6 after one final GUI smoke test on the Phase 6 branch.
+- Optional web-readiness planning, focused on UI-independent application facades.
 
 Exit criteria:
 

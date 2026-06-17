@@ -10,6 +10,7 @@
 - Audited launcher compatibility aliases so tests use real package modules directly, while `density.py` keeps only intentional legacy exports.
 - Added a packaging regression test to keep `density.spec` portable and resource files included.
 - Kept `MainWindow`, `MixtureCalculator`, `load_lhv_data`, and `resource_path` as launcher compatibility aliases for the next public release.
+- Closed Phase 6 after a successful GUI smoke test on the Phase 6 branch.
 
 ### 2026-06-16
 - Completed refactor Phase 3C by adding a `ReportExporter` port and OpenPyXL reporting adapter.
