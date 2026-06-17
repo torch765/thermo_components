@@ -2,7 +2,7 @@ import pytest
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QColor
 
-from density import MainWindow
+from thermo_components.adapters.ui.qt_main_window import MainWindow
 
 
 @pytest.fixture
@@ -116,7 +116,7 @@ def test_duplicate_component_keeps_existing_rows_and_warns(
 ):
     warnings = []
     monkeypatch.setattr(
-        "density.QMessageBox.warning",
+        "thermo_components.adapters.ui.qt_main_window.QMessageBox.warning",
         lambda parent, title, message: warnings.append((title, message)),
     )
 
@@ -149,7 +149,7 @@ def test_remove_without_components_shows_information(
 ):
     messages = []
     monkeypatch.setattr(
-        "density.QMessageBox.information",
+        "thermo_components.adapters.ui.qt_main_window.QMessageBox.information",
         lambda parent, title, message: messages.append((title, message)),
     )
 
@@ -204,7 +204,7 @@ def test_normalize_composition_zero_total_warns_without_success_message(
 ):
     warnings = []
     monkeypatch.setattr(
-        "density.QMessageBox.warning",
+        "thermo_components.adapters.ui.qt_main_window.QMessageBox.warning",
         lambda parent, title, message: warnings.append((title, message)),
     )
     _add_component(main_window, "methane")

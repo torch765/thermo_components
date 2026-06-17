@@ -82,7 +82,7 @@ def test_result_list_presenter_formats_two_phase_density_values():
 
 
 def test_main_window_renders_presented_result_items(qt_app):
-    from density import MainWindow
+    from thermo_components.adapters.ui.qt_main_window import MainWindow
 
     window = MainWindow(lhv_data={"methane": 35.8})
 
@@ -102,7 +102,7 @@ def test_main_window_renders_presented_result_items(qt_app):
 
 
 def test_main_window_uses_input_collector_errors(qt_app):
-    from density import MainWindow
+    from thermo_components.adapters.ui.qt_main_window import MainWindow
 
     window = MainWindow(lhv_data={})
 

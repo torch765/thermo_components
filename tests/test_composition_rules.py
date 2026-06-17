@@ -1,6 +1,6 @@
 import pytest
 
-from density import MainWindow
+from thermo_components.adapters.ui.qt_main_window import MainWindow
 from thermo_components.domain.composition import (
     derive_inactive_percentages,
     is_effectively_pure_water,

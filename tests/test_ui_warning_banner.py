@@ -1,4 +1,4 @@
-from density import MainWindow
+from thermo_components.adapters.ui.qt_main_window import MainWindow
 
 
 def test_warning_banner_shows_cleaned_messages_and_restores_layout(qt_app):

@@ -1,4 +1,4 @@
-from density import MainWindow
+from thermo_components.adapters.ui.qt_main_window import MainWindow
 from thermo_components.domain.thermo_routes import PRMIX_DEFAULT_ROUTE
 from thermo_components.domain.warnings import PRMIX_WATER_WARNING
 

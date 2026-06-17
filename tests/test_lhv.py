@@ -1,6 +1,6 @@
 import pytest
 
-from density import MixtureCalculator
+from thermo_components.adapters.thermo import ThermoGateway
 from thermo_components.domain.lhv import (
     build_lhv_display_values,
     calculate_mixture_lhv,
@@ -37,6 +37,6 @@ def test_mixture_lhv_normalizes_composition_and_reports_missing_data():
     assert missing == ["unknown"]
 
 
-def test_mixture_calculator_keeps_legacy_lhv_method():
-    calculator = MixtureCalculator({"methane": 1.0})
+def test_thermo_gateway_keeps_lhv_method():
+    calculator = ThermoGateway({"methane": 1.0})
     assert calculator.calculate_lhv({"methane": 35.8}) == (35.8, [])

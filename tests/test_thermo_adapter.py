@@ -1,6 +1,5 @@
 import pytest
 
-from density import MixtureCalculator
 from thermo_components.adapters.thermo import ThermoGateway
 from thermo_components.application.ports import ThermoPropertyGateway
 from thermo_components.domain.thermo_routes import (
@@ -9,11 +8,10 @@ from thermo_components.domain.thermo_routes import (
 )
 
 
-def test_thermo_gateway_implements_port_and_legacy_alias():
+def test_thermo_gateway_implements_port():
     gateway = ThermoGateway()
 
     assert isinstance(gateway, ThermoPropertyGateway)
-    assert MixtureCalculator is ThermoGateway
 
 
 def test_thermo_gateway_calculates_methane_with_prmix():

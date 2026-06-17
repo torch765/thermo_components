@@ -1,7 +1,7 @@
 import pytest
 
-from density import MainWindow
 from thermo_components.adapters.ui import QtCalculationWorkflowController
+from thermo_components.adapters.ui.qt_main_window import MainWindow
 from thermo_components.domain.thermo_routes import PRMIX_DEFAULT_ROUTE
 
 

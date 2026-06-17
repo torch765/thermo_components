@@ -1,7 +1,7 @@
 from datetime import datetime
 
-from density import MainWindow
 from thermo_components.adapters.ui import QtReportExportController
+from thermo_components.adapters.ui.qt_main_window import MainWindow
 from thermo_components.application.dto import (
     ReportExportRequest,
     ReportProjection,

@@ -3,7 +3,7 @@
 import sys
 from pathlib import Path
 
-from PyQt6.QtWidgets import QApplication, QMessageBox, QStyleFactory
+from PyQt6.QtWidgets import QApplication, QStyleFactory
 
 from thermo_components.adapters.thermo import ThermoGateway
 from thermo_components.adapters.ui.qt_main_window import MainWindow
@@ -19,7 +19,6 @@ MixtureCalculator = ThermoGateway
 __all__ = [
     "MainWindow",
     "MixtureCalculator",
-    "QMessageBox",
     "load_lhv_data",
     "main",
     "resource_path",

@@ -168,11 +168,13 @@ Completed so far:
 - Removed stale imports left in the moved Qt main-window adapter.
 - Replaced absolute local `.venv` paths in `density.spec` with PyInstaller hook-based package collection.
 - Clarified developer setup docs around the editable package install.
+- Moved tests to real adapter/bootstrap imports and kept only a focused `density.py` launcher compatibility test.
+- Removed the test-only `QMessageBox` compatibility export from `density.py`.
 
 Next:
 
-- Audit remaining compatibility aliases and decide which should stay until a later release.
-- Add any missing tests around packaging/resource assumptions before final Phase 6 closeout.
+- Add tests around packaging/resource assumptions before final Phase 6 closeout.
+- Decide whether to keep `MainWindow`, `MixtureCalculator`, `load_lhv_data`, and `resource_path` launcher aliases for the next public release.
 
 Exit criteria:
 
