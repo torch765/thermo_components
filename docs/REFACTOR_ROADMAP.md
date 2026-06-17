@@ -16,7 +16,7 @@ This roadmap is designed for incremental execution. The application must remain 
 
 ## Phased Plan
 
-Current status: Phases 0 through 6 are complete. Web app planning has started in `docs/WEB_APP_DESIGN.md` and `docs/adr/0001-web-stack.md`.
+Current status: Phases 0 through 6 are complete. Web Phase 0 and Web Phase 1 are complete, with web planning captured in `docs/WEB_APP_DESIGN.md` and `docs/adr/0001-web-stack.md`.
 
 ### Phase 0: Stabilize and Characterize
 
@@ -209,11 +209,19 @@ Deliverables:
 
 ### Web Phase 1: Shared Application Facade
 
+Status: Complete as of 2026-06-17.
+
 Deliverables:
 
 - Add a UI-independent calculation workflow facade.
 - Keep FastAPI and PyQt details out of the facade.
 - Add tests independent of Qt and FastAPI.
+
+Completed:
+
+- Added `CalculationSessionService` in `src/thermo_components/application/services/calculation_session.py`.
+- Composed property calculation and report projection behind a UI-independent request/response.
+- Added application tests that do not import Qt, FastAPI, or `density.py`.
 
 Exit criteria:
 

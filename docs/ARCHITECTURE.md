@@ -40,6 +40,7 @@ The application layer currently owns:
 - flow conversion workflow
 - composition normalization and inactive-basis derivation workflows
 - report result and warning projection
+- adapter-neutral calculation session orchestration for desktop and web
 
 `CalculatePropertiesUseCase` now depends on the application-owned `ThermoPropertyGateway` port. `ThermoGateway` implements that contract in `adapters/thermo` and isolates all direct `thermo` and `chemicals` imports. For the next public release, `density.py` intentionally remains a compatibility launcher and exports legacy names for `MainWindow`, `MixtureCalculator`, `load_lhv_data`, and `resource_path`.
 
@@ -50,7 +51,7 @@ Report export depends on the application-owned `ReportExporter` port. `OpenPyxlR
 The remaining consolidation risks are now narrower:
 
 - Qt adapter code still owns framework coordination and presentation decisions
-- future web-facing workflows may need UI-independent application facades
+- future web-facing workflows may need additional UI-independent application facades
 - compatibility aliases remain intentionally for the next public release
 
 ## Architectural Style
@@ -249,9 +250,11 @@ Use cases should orchestrate workflows and compose domain rules with ports.
 Primary use cases:
 
 - `CalculatePropertiesUseCase`
+- `CalculationSessionService`
 - `ConvertFlowUseCase`
+- `DeriveCompositionUseCase`
 - `NormalizeCompositionUseCase`
-- `ExportReportUseCase`
+- `PrepareReportUseCase`
 
 The application layer is the right place for:
 
@@ -275,6 +278,7 @@ The current module should be decomposed as follows:
 | Water route and warning policy | Extracted | `domain/thermo_routes.py`, `domain/warnings.py` |
 | Density result interpretation | Extracted | `domain/results.py` |
 | Property calculation orchestration | Extracted | `application/use_cases/calculate_properties.py` |
+| Calculation session orchestration | Extracted | `application/services/calculation_session.py` |
 | Flow and composition workflows | Extracted | `application/use_cases/convert_flow.py`, `application/use_cases/normalize_composition.py` |
 | Report projection | Extracted | `application/use_cases/prepare_report.py` |
 | Qt thread bridge | Extracted | `adapters/ui/qt_worker.py` |

@@ -10,8 +10,18 @@ from .ports import (
     ResourceLocator,
     ThermoPropertyGateway,
 )
+from .services import (
+    CalculationSessionRequest,
+    CalculationSessionResponse,
+    CalculationSessionService,
+    FlowDensityState,
+)
 
 __all__ = [
+    "CalculationSessionRequest",
+    "CalculationSessionResponse",
+    "CalculationSessionService",
+    "FlowDensityState",
     "LhvRepository",
     "PropertyCalculationRequest",
     "PropertyCalculationResponse",

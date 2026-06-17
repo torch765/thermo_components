@@ -225,8 +225,11 @@ The exact command may need adjustment for App Platform environment variable hand
 
 ### Web Phase 1: Shared Application Facade
 
+Status: Complete as of 2026-06-17.
+
 - Add a UI-independent calculation workflow facade.
 - Add tests independent of Qt and FastAPI.
+- Facade location: `src/thermo_components/application/services/calculation_session.py`.
 
 ### Web Phase 2: FastAPI Skeleton
 
