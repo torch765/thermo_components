@@ -4,6 +4,7 @@ from .input_collection import (
     CalculationInputCollection,
     collect_property_calculation_request,
 )
+from .calculation_workflow import QtCalculationWorkflowController
 from .composition_table import (
     ComponentAddResult,
     ComponentAddStatus,
@@ -29,6 +30,7 @@ __all__ = [
     "CompositionTableController",
     "CompositionTotalState",
     "FlowTabController",
+    "QtCalculationWorkflowController",
     "QtReportExportController",
     "QtReportRequestBuilder",
     "ThermoWarningBannerController",

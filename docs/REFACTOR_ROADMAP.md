@@ -125,7 +125,7 @@ Exit criteria:
 
 ### Phase 5: Thin Launcher and MainWindow Migration
 
-Status: In progress. Phase 5C completed on 2026-06-17.
+Status: In progress. Phase 5D completed on 2026-06-17.
 
 Deliverables:
 
@@ -140,10 +140,11 @@ Completed so far:
 - Added characterization tests for `MainWindow` dependency injection, flow-tab rendering, report request helpers, and calculation result/error lifecycle hooks.
 - Moved Flow-tab widget setup, output configuration, signal wiring, and conversion rendering into `adapters/ui/flow_tab.py`.
 - Moved report condition collection, composition row collection, projection calls, and export-request assembly into `adapters/ui/report_request.py`.
+- Moved calculation input orchestration, worker/thread wiring, result/error rendering, finish-state handling, and progress reset into `adapters/ui/calculation_workflow.py`.
 
 Next:
 
-- Extract remaining calculation/progress workflow coordination after adding or extending targeted tests.
+- Move `MainWindow` into `adapters/ui/qt_main_window.py` and reduce `density.py` to compatibility imports plus launcher code.
 
 Exit criteria:
 

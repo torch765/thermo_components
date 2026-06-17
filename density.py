@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (
     QStyleFactory,
     QTableWidgetItem,
 )
-from PyQt6.QtCore import Qt, QTimer, QThread
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QColor
 
 # --- Import the generated UI class ---
@@ -51,20 +51,17 @@ from thermo_components.domain.results import (
 )
 from thermo_components.adapters.thermo import ThermoGateway
 from thermo_components.adapters.ui import (
-    CalculationWorker,
     ComponentAddStatus,
     ComponentRemoveStatus,
     CompositionTableController,
     FlowTabController,
+    QtCalculationWorkflowController,
     QtReportRequestBuilder,
     ThermoWarningBannerController,
-    build_result_list_items,
-    collect_property_calculation_request,
 )
 from thermo_components.application.dto import (
     DeriveCompositionRequest,
     NormalizeCompositionRequest,
-    coerce_property_response,
 )
 from thermo_components.bootstrap import (
     build_desktop_dependencies,
@@ -143,6 +140,25 @@ class MainWindow(QMainWindow):
             self.prepare_report_use_case,
             lhv_data_available_provider=lambda: self.lhv_data_loaded,
             latest_result_provider=lambda: self.last_result_data,
+        )
+        self.calculation_workflow_controller = QtCalculationWorkflowController(
+            self.ui,
+            self.calculate_properties_use_case,
+            lhv_data_loaded_provider=lambda: self.lhv_data_loaded,
+            fallback_model_provider=lambda: self.calculator.eos,
+            invalidate_results=lambda clear_visible_results=True: (
+                self.invalidate_results(clear_visible_results)
+            ),
+            set_result_state=lambda response, result_data: (
+                self._set_calculation_result_state(response, result_data)
+            ),
+            set_warning_messages=lambda messages: (
+                self.set_thermo_warning_messages(messages)
+            ),
+            update_flow_conversion=lambda: self.update_flow_conversion(),
+            animate_progress_to=lambda target, duration_ms=500: (
+                self.animate_progress_to(target, duration_ms)
+            ),
         )
 
         if not self.lhv_data_loaded:
@@ -253,6 +269,15 @@ class MainWindow(QMainWindow):
         if clear_visible_results:
             self.ui.results_list.clear()
         self.update_flow_conversion()
+
+    def _set_calculation_result_state(self, response, result_data):
+        """Store latest calculation state used by export and flow conversion."""
+        self.last_result_data = response
+        self.density_actual_kg_m3 = result_data.get("density_actual_kg_m3")
+        self.density_normal_kg_m3 = result_data.get("density_normal_kg_m3")
+        self.density_standard_kg_m3 = result_data.get(
+            "density_standard_kg_m3"
+        )
 
     def setup_thermo_warning_banner(self):
         """Create a persistent, non-modal warning banner above the main results area."""
@@ -505,69 +530,24 @@ class MainWindow(QMainWindow):
         return self.composition_table.update_table_total()
 
     def calculate_and_display(self):
-        """Gather inputs, run calculations, and display results."""
-        # Step 3: Set progress bar to 0 at the start of calculation
-        if hasattr(self.ui, 'progressBar'):
-            self.ui.progressBar.setValue(0)
-        # Start animating progress bar to 80% over 1 second as soon as Go! is clicked
-        self.animate_progress_to(80, 1000)
-        self.invalidate_results()
-
-        collected_input = collect_property_calculation_request(self.ui)
-        if collected_input.error_message:
-            self.ui.results_list.addItem(collected_input.error_message)
-            self.animate_progress_to(100, 500)
-            return
-
-        # --- Threaded calculation setup ---
-        self.ui.go_button.setEnabled(False)
-        if hasattr(self.ui, "printResultsButton"):
-            self.ui.printResultsButton.setEnabled(False)
-        self.worker_thread = QThread()
-        self.worker = CalculationWorker(
-            use_case=self.calculate_properties_use_case,
-            request=collected_input.request,
-        )
-        self.worker.moveToThread(self.worker_thread)
-        self.worker.result.connect(self.on_calculation_result)
-        self.worker.error.connect(self.on_calculation_error)
-        self.worker.finished.connect(self.on_calculation_finished)
-        self.worker_thread.started.connect(self.worker.run)
-        self.worker.finished.connect(self.worker_thread.quit)
-        self.worker.finished.connect(self.worker.deleteLater)
-        self.worker_thread.finished.connect(self.worker_thread.deleteLater)
-        self.worker_thread.start()
-        return
+        """Compatibility wrapper for calculation workflow orchestration."""
+        return self.calculation_workflow_controller.calculate_and_display()
 
     def on_calculation_result(self, result_data):
-        # Update the UI with calculation results (runs in main thread)
-        response = coerce_property_response(result_data)
-        self.last_result_data = response
-        result_data = response.to_legacy_dict()
-        self.density_actual_kg_m3 = result_data.get("density_actual_kg_m3")
-        self.density_normal_kg_m3 = result_data.get("density_normal_kg_m3")
-        self.density_standard_kg_m3 = result_data.get("density_standard_kg_m3")
-        self.set_thermo_warning_messages(result_data.get("warnings") or [])
-        self.update_flow_conversion()
-        self.ui.results_list.clear()
-        for item in build_result_list_items(
-            response,
-            lhv_data_loaded=self.lhv_data_loaded,
-            fallback_model_display=self.calculator.eos,
-        ):
-            self.ui.results_list.addItem(item)
-        self.animate_progress_to(100, 500)
+        """Compatibility wrapper for calculation-result rendering."""
+        return self.calculation_workflow_controller.on_calculation_result(
+            result_data
+        )
 
     def on_calculation_error(self, error_msg):
-        self.invalidate_results(clear_visible_results=False)
-        self.ui.results_list.clear()
-        self.ui.results_list.addItem(error_msg)
-        self.animate_progress_to(100, 500)
+        """Compatibility wrapper for calculation-error rendering."""
+        return self.calculation_workflow_controller.on_calculation_error(
+            error_msg
+        )
 
     def on_calculation_finished(self):
-        self.ui.go_button.setEnabled(True)
-        if hasattr(self.ui, "printResultsButton"):
-            self.ui.printResultsButton.setEnabled(True)
+        """Compatibility wrapper for calculation-finished UI state."""
+        return self.calculation_workflow_controller.on_calculation_finished()
 
     def normalize_composition(self):
         """Normalize the active composition column (mol% or wt%) so the sum is 100%."""
