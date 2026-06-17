@@ -16,7 +16,7 @@ This roadmap is designed for incremental execution. The application must remain 
 
 ## Phased Plan
 
-Current status: Phases 0 through 6 are complete. Future web-readiness refinements should become application-layer facades rather than Qt adapter code.
+Current status: Phases 0 through 6 are complete. Web app planning has started in `docs/WEB_APP_DESIGN.md` and `docs/adr/0001-web-stack.md`.
 
 ### Phase 0: Stabilize and Characterize
 
@@ -182,6 +182,103 @@ Exit criteria:
 
 - The old monolithic structure is retired.
 - The codebase reflects the documented architecture.
+
+## Web App Plan
+
+Design basis:
+
+- See `docs/WEB_APP_DESIGN.md`.
+- See `docs/adr/0001-web-stack.md`.
+
+Target:
+
+- Build an online calculator, not a download page for the desktop executable.
+- Add a new FastAPI web adapter that reuses the existing domain/application core.
+- Deploy the first MVP to DigitalOcean App Platform.
+- Keep the PyQt desktop app working during web development.
+
+### Web Phase 0: Design Basis
+
+Status: Complete as of 2026-06-17.
+
+Deliverables:
+
+- Document MVP scope and non-goals.
+- Record web stack decision.
+- Define initial route, report download, data, and deployment assumptions.
+
+### Web Phase 1: Shared Application Facade
+
+Deliverables:
+
+- Add a UI-independent calculation workflow facade.
+- Keep FastAPI and PyQt details out of the facade.
+- Add tests independent of Qt and FastAPI.
+
+Exit criteria:
+
+- Web and desktop adapters can share calculation workflow assembly.
+- No web route needs to call PyQt code or `density.py`.
+
+### Web Phase 2: FastAPI Skeleton
+
+Deliverables:
+
+- Add FastAPI/Uvicorn dependencies.
+- Add `src/thermo_components/adapters/web/app.py`.
+- Add `/health`.
+- Add basic app startup tests.
+
+Exit criteria:
+
+- The web app can run locally with Uvicorn.
+- The desktop app still runs.
+
+### Web Phase 3: Calculation Form/API
+
+Deliverables:
+
+- Add web schemas and request validation.
+- Translate form/API input into application requests.
+- Render or return calculated results and warnings.
+
+Exit criteria:
+
+- A user can run a calculation without PyQt.
+
+### Web Phase 4: Server-Rendered UI
+
+Deliverables:
+
+- Add Jinja2 templates and project CSS.
+- Add calculator form, result view, and validation messages.
+
+Exit criteria:
+
+- The MVP is usable from a browser with no JavaScript framework.
+
+### Web Phase 5: Report Download
+
+Deliverables:
+
+- Add report download endpoint.
+- Generate reports per request without persistent local storage.
+
+Exit criteria:
+
+- A user can download an Excel report from the web calculation.
+
+### Web Phase 6: DigitalOcean Deployment
+
+Deliverables:
+
+- Add App Platform deployment notes or app spec.
+- Confirm build/start command.
+- Deploy from GitHub.
+
+Exit criteria:
+
+- The MVP is reachable online and passes a deployment smoke test.
 
 ## Module-by-Module Move Plan
 

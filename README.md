@@ -48,6 +48,8 @@ The tests run Qt in offscreen mode and do not display the application window.
 
 - Architecture target: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 - Refactor roadmap: [docs/REFACTOR_ROADMAP.md](docs/REFACTOR_ROADMAP.md)
+- Web app design basis: [docs/WEB_APP_DESIGN.md](docs/WEB_APP_DESIGN.md)
+- Web stack ADR: [docs/adr/0001-web-stack.md](docs/adr/0001-web-stack.md)
 - Contribution workflow: [CONTRIBUTING.md](CONTRIBUTING.md)
 - Change history: [DEVLOG.md](DEVLOG.md)
 
