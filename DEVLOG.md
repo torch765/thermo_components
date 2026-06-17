@@ -1,5 +1,8 @@
 ## DEVLOG
 
+### 2026-06-17
+- Started Phase 5 on a dedicated branch with `MainWindow` characterization tests for dependency injection, flow rendering, report request helpers, and calculation result/error lifecycle hooks.
+
 ### 2026-06-16
 - Completed refactor Phase 3C by adding a `ReportExporter` port and OpenPyXL reporting adapter.
 - Moved Excel workbook layout, formatting, and file writing out of `density.py`.

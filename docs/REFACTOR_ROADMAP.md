@@ -125,6 +125,8 @@ Exit criteria:
 
 ### Phase 5: Thin Launcher and MainWindow Migration
 
+Status: In progress. Phase 5A started on 2026-06-17.
+
 Deliverables:
 
 - Move `MainWindow` into `adapters/ui/qt_main_window.py` or reduce `density.py` to importing it.
@@ -132,6 +134,14 @@ Deliverables:
 - Extract remaining flow-tab UI coordination if it still materially clutters `MainWindow`.
 - Move report request assembly behind a small UI/application boundary if the current helper wrappers become a blocker.
 - Keep legacy aliases and wrappers in `density.py` until tests and packaging no longer need them.
+
+Completed so far:
+
+- Added characterization tests for `MainWindow` dependency injection, flow-tab rendering, report request helpers, and calculation result/error lifecycle hooks.
+
+Next:
+
+- Extract flow-tab UI coordination into a small controller, using the new characterization tests as the safety net.
 
 Exit criteria:
 
