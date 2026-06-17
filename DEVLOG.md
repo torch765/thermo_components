@@ -6,6 +6,7 @@
 - Completed Phase 5C by moving report condition collection, composition row collection, projection calls, and export-request assembly into `adapters/ui/report_request.py`.
 - Completed Phase 5D by moving calculation input orchestration, worker/thread wiring, result/error rendering, finish-state handling, and progress reset into `adapters/ui/calculation_workflow.py`.
 - Completed Phase 5E by moving `MainWindow` into `adapters/ui/qt_main_window.py` and reducing `density.py` to a compatibility launcher plus legacy aliases.
+- Started Phase 6 by removing stale moved-window imports, making `density.spec` machine-independent, and tightening developer setup notes.
 
 ### 2026-06-16
 - Completed refactor Phase 3C by adding a `ReportExporter` port and OpenPyXL reporting adapter.

@@ -23,8 +23,9 @@ The application works today as a single-user desktop tool. Pure rules live in `s
 
 ```powershell
 python -m pip install -r requirements.txt
-python -m pip install -e .
 ```
+
+`requirements.txt` includes the editable local package install. For an older existing virtual environment, rerun the command above if `python density.py` cannot import `thermo_components`.
 
 3. Run the desktop app:
 

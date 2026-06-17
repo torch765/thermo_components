@@ -16,6 +16,15 @@ from thermo_components.bootstrap import (
 
 MixtureCalculator = ThermoGateway
 
+__all__ = [
+    "MainWindow",
+    "MixtureCalculator",
+    "QMessageBox",
+    "load_lhv_data",
+    "main",
+    "resource_path",
+]
+
 
 def load_lhv_data(db_path="lhv_data.db"):
     """Load LHV data through the SQLite persistence adapter."""

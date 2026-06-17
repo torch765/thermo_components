@@ -12,40 +12,7 @@ from PyQt6.QtGui import QColor
 # --- Import the generated UI class ---
 from gui import Ui_Dialog
 
-from thermo_components.domain.composition import (
-    MOLECULAR_WEIGHTS,
-    PURE_WATER_WARNING_FRACTION,
-    WATER_COMPONENT_ALIASES,
-    active_basis_amount_rows as _active_basis_amount_rows,
-    derive_inactive_percentages,
-    has_water_component,
-    is_effectively_pure_water,
-    is_water_component,
-    normalize_component_identity,
-    normalize_percentages,
-    percentages_to_mole_fractions,
-    water_fraction_active_basis,
-)
-from thermo_components.domain.conditions import (
-    ATM_TO_PA,
-    NORMAL_P_ATM,
-    NORMAL_T_C,
-    R,
-    STANDARD_P_ATM,
-    STANDARD_T_C,
-    STANDARD_T_F,
-    atm_to_pa,
-    celsius_to_kelvin,
-)
-from thermo_components.domain.lhv import (
-    KCAL_PER_MJ,
-    MJ_PER_MMBTU,
-    NORMAL_MOLAR_VOLUME_NM3_PER_KMOL,
-)
-from thermo_components.domain.results import (
-    build_density_note,
-    extract_scalar_density_value,
-)
+from thermo_components.domain.composition import MOLECULAR_WEIGHTS
 from thermo_components.adapters.ui.calculation_workflow import (
     QtCalculationWorkflowController,
 )

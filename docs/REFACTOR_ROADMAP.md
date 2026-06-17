@@ -155,11 +155,24 @@ Exit criteria:
 
 ### Phase 6: Consolidate and Clean Up
 
+Status: In progress. Phase 6A started on 2026-06-17.
+
 Deliverables:
 
 - Remove dead helper code from the monolith.
 - Update packaging paths and developer workflow docs.
 - Expand test coverage around extracted adapters.
+
+Completed so far:
+
+- Removed stale imports left in the moved Qt main-window adapter.
+- Replaced absolute local `.venv` paths in `density.spec` with PyInstaller hook-based package collection.
+- Clarified developer setup docs around the editable package install.
+
+Next:
+
+- Audit remaining compatibility aliases and decide which should stay until a later release.
+- Add any missing tests around packaging/resource assumptions before final Phase 6 closeout.
 
 Exit criteria:
 

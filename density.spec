@@ -1,12 +1,24 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules
+
+
+thermo_datas = collect_data_files('thermo')
+chemicals_datas = collect_data_files('chemicals')
+thermo_hiddenimports = collect_submodules('thermo')
+chemicals_hiddenimports = collect_submodules('chemicals')
 
 a = Analysis(
     ['density.py'],
     pathex=[],
     binaries=[],
-    datas=[('lhv_data.db', '.'), ('gui.ui', '.'), ('D:/OneDrive/Python/Projects/thermo_components/.venv/Lib/site-packages/chemicals', 'chemicals'), ('D:/OneDrive/Python/Projects/thermo_components/.venv/Lib/site-packages/thermo', 'thermo')],
-    hiddenimports=[],
+    datas=[
+        ('lhv_data.db', '.'),
+        ('gui.ui', '.'),
+        *thermo_datas,
+        *chemicals_datas,
+    ],
+    hiddenimports=thermo_hiddenimports + chemicals_hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

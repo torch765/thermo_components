@@ -11,7 +11,6 @@ This repository is being converted from a working desktop-script application int
 
 ```powershell
 python -m pip install -r requirements-dev.txt
-python -m pip install -e .
 ```
 
 3. Run the application:
