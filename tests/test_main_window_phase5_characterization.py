@@ -3,7 +3,7 @@ from datetime import datetime
 import pytest
 
 from density import MainWindow
-from thermo_components.adapters.ui import FlowTabController
+from thermo_components.adapters.ui import FlowTabController, QtReportRequestBuilder
 from thermo_components.bootstrap import build_desktop_dependencies
 from thermo_components.domain.thermo_routes import PRMIX_DEFAULT_ROUTE
 
@@ -66,6 +66,7 @@ def test_main_window_accepts_bootstrap_dependencies(qt_app, tmp_path):
             is dependencies.calculate_properties_use_case
         )
         assert isinstance(window.flow_tab_controller, FlowTabController)
+        assert isinstance(window.report_request_builder, QtReportRequestBuilder)
         assert window.report_exporter is dependencies.report_exporter
         assert (
             window.report_export_controller.report_exporter

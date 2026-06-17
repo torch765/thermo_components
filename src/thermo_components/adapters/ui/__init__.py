@@ -16,6 +16,7 @@ from .flow_tab import FlowTabController
 from .presenters import build_result_list_items
 from .qt_worker import CalculationWorker
 from .report_controller import QtReportExportController
+from .report_request import QtReportRequestBuilder
 from .warning_banner import ThermoWarningBannerController
 
 __all__ = [
@@ -29,6 +30,7 @@ __all__ = [
     "CompositionTotalState",
     "FlowTabController",
     "QtReportExportController",
+    "QtReportRequestBuilder",
     "ThermoWarningBannerController",
     "build_result_list_items",
     "collect_property_calculation_request",

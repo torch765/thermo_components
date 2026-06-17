@@ -56,6 +56,7 @@ from thermo_components.adapters.ui import (
     ComponentRemoveStatus,
     CompositionTableController,
     FlowTabController,
+    QtReportRequestBuilder,
     ThermoWarningBannerController,
     build_result_list_items,
     collect_property_calculation_request,
@@ -63,10 +64,6 @@ from thermo_components.adapters.ui import (
 from thermo_components.application.dto import (
     DeriveCompositionRequest,
     NormalizeCompositionRequest,
-    ReportCompositionRow,
-    ReportConditionRow,
-    ReportExportRequest,
-    ReportPreparationRequest,
     coerce_property_response,
 )
 from thermo_components.bootstrap import (
@@ -140,6 +137,12 @@ class MainWindow(QMainWindow):
             self.convert_flow_use_case,
             normal_density_provider=lambda: self.density_normal_kg_m3,
             standard_density_provider=lambda: self.density_standard_kg_m3,
+        )
+        self.report_request_builder = QtReportRequestBuilder(
+            self.ui,
+            self.prepare_report_use_case,
+            lhv_data_available_provider=lambda: self.lhv_data_loaded,
+            latest_result_provider=lambda: self.last_result_data,
         )
 
         if not self.lhv_data_loaded:
@@ -271,68 +274,28 @@ class MainWindow(QMainWindow):
         return self.report_export_controller.build_report_filename(timestamp)
 
     def get_current_conditions(self):
-        """Return the currently active calculation conditions for reporting."""
-        if self.last_result_data:
-            response = coerce_property_response(self.last_result_data)
-            basis = response.basis
-            model_display = response.model_display
-        else:
-            basis = (
-                "Mol %"
-                if self.ui.radioButton_mol_percent.isChecked()
-                else "Wt %"
-            )
-            model_display = self.ui.comboBox_select_EOS.currentText()
-        return [
-            ("Basis", basis),
-            ("Temperature", self.ui.comboBox_select_temperature.currentText()),
-            ("Pressure", self.ui.comboBox_select_pressure.currentText()),
-            ("Model / EOS", model_display),
-        ]
+        """Compatibility wrapper for report condition collection."""
+        return self.report_request_builder.get_current_conditions()
 
     def _coerce_report_value(self, text: str):
-        """Convert report cell text to float when possible, preserving blanks/text."""
-        cleaned = str(text).strip() if text is not None else ""
-        if not cleaned:
-            return ""
-        try:
-            return float(cleaned)
-        except ValueError:
-            return cleaned
+        """Compatibility wrapper for report cell value coercion."""
+        return self.report_request_builder.coerce_report_value(text)
 
     def get_input_composition_rows(self):
-        """Return the input composition table rows, including the Total row."""
-        rows = []
-        for row_index in range(self.ui.tableWidget.rowCount()):
-            component_item = self.ui.tableWidget.item(row_index, 0)
-            mol_item = self.ui.tableWidget.item(row_index, 1)
-            wt_item = self.ui.tableWidget.item(row_index, 2)
-            rows.append({
-                "Component": component_item.text() if component_item else "",
-                "Mol %": self._coerce_report_value(mol_item.text() if mol_item else ""),
-                "Wt %": self._coerce_report_value(wt_item.text() if wt_item else ""),
-            })
-        return rows
+        """Compatibility wrapper for report composition row collection."""
+        return self.report_request_builder.get_input_composition_rows()
 
     def build_report_projection(self, result_data):
-        """Build the typed report projection used by display and export paths."""
-        response = coerce_property_response(result_data)
-        return self.prepare_report_use_case.execute(
-            ReportPreparationRequest(
-                calculation=response,
-                lhv_data_available=self.lhv_data_loaded,
-            )
-        )
+        """Compatibility wrapper for typed report projection."""
+        return self.report_request_builder.build_report_projection(result_data)
 
     def build_report_warning_rows(self, result_data):
-        """Build structured warning rows for the export report."""
-        projection = self.build_report_projection(result_data)
-        return [row.to_dict() for row in projection.warning_rows]
+        """Compatibility wrapper for structured report warning rows."""
+        return self.report_request_builder.build_report_warning_rows(result_data)
 
     def build_results_rows(self, result_data):
-        """Build structured result rows for report export without scraping the UI."""
-        projection = self.build_report_projection(result_data)
-        return [row.to_dict() for row in projection.result_rows]
+        """Compatibility wrapper for structured report result rows."""
+        return self.report_request_builder.build_results_rows(result_data)
 
     def export_results_to_excel(self):
         """Export the latest calculation results to a formatted Excel workbook."""
@@ -342,25 +305,11 @@ class MainWindow(QMainWindow):
         )
 
     def _build_report_export_request(self, report_path, timestamp):
-        """Build the typed report export request for the latest calculation."""
-        export_request = ReportExportRequest(
-            report_path=report_path,
-            exported_at=timestamp,
-            conditions=tuple(
-                ReportConditionRow(setting, value)
-                for setting, value in self.get_current_conditions()
-            ),
-            input_rows=tuple(
-                ReportCompositionRow(
-                    row["Component"],
-                    row["Mol %"],
-                    row["Wt %"],
-                )
-                for row in self.get_input_composition_rows()
-            ),
-            projection=self.build_report_projection(self.last_result_data),
+        """Compatibility wrapper for report export request construction."""
+        return self.report_request_builder.build_export_request(
+            report_path,
+            timestamp,
         )
-        return export_request
 
     def setup_flow_tab(self):
         """Initialize the Flow tab controls from the UI adapter."""
