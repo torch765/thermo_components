@@ -1,6 +1,9 @@
 from pathlib import Path
 import sys
 
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
 from thermo_components.adapters.packaging import RuntimeResourceLocator
 from thermo_components.adapters.persistence import SqliteLhvRepository
 from thermo_components.application.ports import LhvRepository, ResourceLocator
@@ -84,3 +87,34 @@ def test_resource_path_returns_absolute_string(monkeypatch, tmp_path):
 
     assert isinstance(resolved, str)
     assert Path(resolved) == (tmp_path / "lhv_data.db").resolve()
+
+
+def test_pyinstaller_spec_uses_portable_package_collection():
+    spec_text = (PROJECT_ROOT / "density.spec").read_text(
+        encoding="utf-8"
+    )
+    forbidden_fragments = (
+        "D:/",
+        "D:\\",
+        "OneDrive",
+        ".venv/Lib/site-packages",
+        ".venv\\Lib\\site-packages",
+        "site-packages/chemicals",
+        "site-packages\\chemicals",
+        "site-packages/thermo",
+        "site-packages\\thermo",
+    )
+
+    assert "collect_data_files" in spec_text
+    assert "collect_submodules" in spec_text
+    assert "collect_data_files('thermo')" in spec_text
+    assert "collect_data_files('chemicals')" in spec_text
+    assert "collect_submodules('thermo')" in spec_text
+    assert "collect_submodules('chemicals')" in spec_text
+    assert "('lhv_data.db', '.')" in spec_text
+    assert "('gui.ui', '.')" in spec_text
+    assert "hiddenimports=thermo_hiddenimports + chemicals_hiddenimports" in (
+        spec_text
+    )
+    for fragment in forbidden_fragments:
+        assert fragment not in spec_text

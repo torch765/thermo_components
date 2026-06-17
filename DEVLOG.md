@@ -8,6 +8,7 @@
 - Completed Phase 5E by moving `MainWindow` into `adapters/ui/qt_main_window.py` and reducing `density.py` to a compatibility launcher plus legacy aliases.
 - Started Phase 6 by removing stale moved-window imports, making `density.spec` machine-independent, and tightening developer setup notes.
 - Audited launcher compatibility aliases so tests use real package modules directly, while `density.py` keeps only intentional legacy exports.
+- Added a packaging regression test to keep `density.spec` portable and resource files included.
 
 ### 2026-06-16
 - Completed refactor Phase 3C by adding a `ReportExporter` port and OpenPyXL reporting adapter.

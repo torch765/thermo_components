@@ -170,11 +170,12 @@ Completed so far:
 - Clarified developer setup docs around the editable package install.
 - Moved tests to real adapter/bootstrap imports and kept only a focused `density.py` launcher compatibility test.
 - Removed the test-only `QMessageBox` compatibility export from `density.py`.
+- Added a packaging regression test that keeps `density.spec` portable and verifies bundled resource entries remain present.
 
 Next:
 
-- Add tests around packaging/resource assumptions before final Phase 6 closeout.
 - Decide whether to keep `MainWindow`, `MixtureCalculator`, `load_lhv_data`, and `resource_path` launcher aliases for the next public release.
+- Close Phase 6 after one final GUI/package smoke decision.
 
 Exit criteria:
 
