@@ -40,22 +40,6 @@ from thermo_components.domain.conditions import (
     atm_to_pa,
     celsius_to_kelvin,
 )
-from thermo_components.domain.flow_conversion import (
-    convert_flow,
-    format_flow_value,
-    parse_flow_input,
-)
-from thermo_components.domain.flow_units import (
-    FLOW_UNIT_DEFINITIONS,
-    FLOW_UNIT_ORDER,
-    FT3_PER_M3,
-    HOURS_PER_DAY,
-    KG_PER_LB,
-    KG_PER_TONNE,
-    LB_PER_KLB,
-    M3_PER_BBL,
-    M3_PER_FT3,
-)
 from thermo_components.domain.lhv import (
     KCAL_PER_MJ,
     MJ_PER_MMBTU,
@@ -71,13 +55,13 @@ from thermo_components.adapters.ui import (
     ComponentAddStatus,
     ComponentRemoveStatus,
     CompositionTableController,
+    FlowTabController,
     ThermoWarningBannerController,
     build_result_list_items,
     collect_property_calculation_request,
 )
 from thermo_components.application.dto import (
     DeriveCompositionRequest,
-    FlowConversionRequest,
     NormalizeCompositionRequest,
     ReportCompositionRow,
     ReportConditionRow,
@@ -151,6 +135,12 @@ class MainWindow(QMainWindow):
         self.density_actual_kg_m3 = None
         self.density_normal_kg_m3 = None
         self.density_standard_kg_m3 = None
+        self.flow_tab_controller = FlowTabController(
+            self.ui,
+            self.convert_flow_use_case,
+            normal_density_provider=lambda: self.density_normal_kg_m3,
+            standard_density_provider=lambda: self.density_standard_kg_m3,
+        )
 
         if not self.lhv_data_loaded:
              print("Warning: MainWindow initialized with no LHV data.")
@@ -373,57 +363,16 @@ class MainWindow(QMainWindow):
         return export_request
 
     def setup_flow_tab(self):
-        """Initialize the Flow tab controls from the current UI definition."""
-        if not hasattr(self.ui, "comboBox_select_units"):
-            return
-
-        self.ui.comboBox_select_units.clear()
-        self.ui.comboBox_select_units.addItems(FLOW_UNIT_ORDER)
-        self.ui.comboBox_select_desired_units.clear()
-        self.ui.comboBox_select_desired_units.addItems(FLOW_UNIT_ORDER)
-        self.ui.comboBox_select_units.setCurrentText("kg/h")
-        self.ui.comboBox_select_desired_units.setCurrentText("t/d")
-        self._configure_copyable_flow_output(self.ui.lineEdit_result)
-        self._configure_copyable_flow_output(self.ui.lineEdit_in_desired_units)
-        self.update_flow_conversion()
+        """Initialize the Flow tab controls from the UI adapter."""
+        self.flow_tab_controller.setup()
 
     def _configure_copyable_flow_output(self, line_edit):
-        """Keep flow outputs read-only while preserving selection and copy behavior."""
-        line_edit.setReadOnly(True)
-        line_edit.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-        line_edit.setContextMenuPolicy(Qt.ContextMenuPolicy.DefaultContextMenu)
-        line_edit.setCursor(Qt.CursorShape.IBeamCursor)
-        line_edit.setDragEnabled(True)
+        """Compatibility wrapper for the extracted Flow-tab controller."""
+        self.flow_tab_controller.configure_copyable_output(line_edit)
 
     def update_flow_conversion(self):
-        """Recalculate the Flow-tab conversion using the latest density state."""
-        if not hasattr(self.ui, "lineEdit_enter_flow"):
-            return
-
-        from_unit = self.ui.comboBox_select_units.currentText().strip()
-        to_unit = self.ui.comboBox_select_desired_units.currentText().strip()
-        self.ui.lineEdit_in_desired_units.setText(to_unit)
-
-        if not from_unit or not to_unit:
-            self.ui.lineEdit_result.clear()
-            return
-
-        input_text = self.ui.lineEdit_enter_flow.text()
-        try:
-            response = self.convert_flow_use_case.execute(
-                FlowConversionRequest(
-                    input_text=input_text,
-                    from_unit=from_unit,
-                    to_unit=to_unit,
-                    normal_density_kg_m3=self.density_normal_kg_m3,
-                    standard_density_kg_m3=self.density_standard_kg_m3,
-                )
-            )
-        except ValueError as exc:
-            self.ui.lineEdit_result.setText(str(exc))
-            return
-
-        self.ui.lineEdit_result.setText(response.display_value)
+        """Compatibility wrapper for Flow-tab conversion rendering."""
+        self.flow_tab_controller.update_conversion()
 
     def populate_comboboxes(self):
         """Populate the ComboBox widgets with options."""
@@ -473,10 +422,7 @@ class MainWindow(QMainWindow):
         self.ui.pushButton_normalize.clicked.connect(self.normalize_composition)
         if hasattr(self.ui, "printResultsButton"):
             self.ui.printResultsButton.clicked.connect(self.export_results_to_excel)
-        if hasattr(self.ui, "lineEdit_enter_flow"):
-            self.ui.lineEdit_enter_flow.textChanged.connect(self.update_flow_conversion)
-            self.ui.comboBox_select_units.currentIndexChanged.connect(self.update_flow_conversion)
-            self.ui.comboBox_select_desired_units.currentIndexChanged.connect(self.update_flow_conversion)
+        self.flow_tab_controller.connect_signals()
 
         # Connect Table Change Signal
         self.ui.tableWidget.itemChanged.connect(self.on_table_item_changed)

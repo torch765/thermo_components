@@ -125,7 +125,7 @@ Exit criteria:
 
 ### Phase 5: Thin Launcher and MainWindow Migration
 
-Status: In progress. Phase 5A started on 2026-06-17.
+Status: In progress. Phase 5B completed on 2026-06-17.
 
 Deliverables:
 
@@ -138,10 +138,11 @@ Deliverables:
 Completed so far:
 
 - Added characterization tests for `MainWindow` dependency injection, flow-tab rendering, report request helpers, and calculation result/error lifecycle hooks.
+- Moved Flow-tab widget setup, output configuration, signal wiring, and conversion rendering into `adapters/ui/flow_tab.py`.
 
 Next:
 
-- Extract flow-tab UI coordination into a small controller, using the new characterization tests as the safety net.
+- Extract report request assembly from `MainWindow` behind a small UI/application boundary.
 
 Exit criteria:
 

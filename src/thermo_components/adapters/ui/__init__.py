@@ -12,6 +12,7 @@ from .composition_table import (
     CompositionTableController,
     CompositionTotalState,
 )
+from .flow_tab import FlowTabController
 from .presenters import build_result_list_items
 from .qt_worker import CalculationWorker
 from .report_controller import QtReportExportController
@@ -26,6 +27,7 @@ __all__ = [
     "ComponentRemoveStatus",
     "CompositionTableController",
     "CompositionTotalState",
+    "FlowTabController",
     "QtReportExportController",
     "ThermoWarningBannerController",
     "build_result_list_items",
