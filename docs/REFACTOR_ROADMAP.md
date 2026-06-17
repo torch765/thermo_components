@@ -16,7 +16,7 @@ This roadmap is designed for incremental execution. The application must remain 
 
 ## Phased Plan
 
-Current status: Phases 0, 1, 2, 3, and 4 are complete. The remaining work is to shrink or relocate `MainWindow`, keep `density.py` as a compatibility launcher, and finish consolidation/packaging cleanup.
+Current status: Phases 0 through 5 are complete. The remaining work is consolidation, packaging cleanup, and any web-readiness refinements that should become application-layer facades rather than Qt adapter code.
 
 ### Phase 0: Stabilize and Characterize
 
@@ -125,7 +125,7 @@ Exit criteria:
 
 ### Phase 5: Thin Launcher and MainWindow Migration
 
-Status: In progress. Phase 5D completed on 2026-06-17.
+Status: Complete as of 2026-06-17.
 
 Deliverables:
 
@@ -141,10 +141,11 @@ Completed so far:
 - Moved Flow-tab widget setup, output configuration, signal wiring, and conversion rendering into `adapters/ui/flow_tab.py`.
 - Moved report condition collection, composition row collection, projection calls, and export-request assembly into `adapters/ui/report_request.py`.
 - Moved calculation input orchestration, worker/thread wiring, result/error rendering, finish-state handling, and progress reset into `adapters/ui/calculation_workflow.py`.
+- Moved `MainWindow` into `adapters/ui/qt_main_window.py` and reduced `density.py` to a compatibility launcher plus legacy aliases.
 
 Next:
 
-- Move `MainWindow` into `adapters/ui/qt_main_window.py` and reduce `density.py` to compatibility imports plus launcher code.
+- Start Phase 6 consolidation and cleanup.
 
 Exit criteria:
 

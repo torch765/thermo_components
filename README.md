@@ -4,7 +4,7 @@ Thermo Components is a PyQt6 desktop application for calculating thermodynamic p
 
 ## Status
 
-The application works today as a single-user desktop tool. Pure rules live in `src/thermo_components/domain`, workflow orchestration and ports live in `src/thermo_components/application`, and external thermodynamics, SQLite, Excel, packaging, and several Qt UI concerns live under `src/thermo_components/adapters`. Desktop dependency composition lives in `src/thermo_components/bootstrap`; the main PyQt window and compatibility launcher are still hosted by [density.py](density.py).
+The application works today as a single-user desktop tool. Pure rules live in `src/thermo_components/domain`, workflow orchestration and ports live in `src/thermo_components/application`, and external thermodynamics, SQLite, Excel, packaging, and Qt UI concerns live under `src/thermo_components/adapters`. Desktop dependency composition lives in `src/thermo_components/bootstrap`; [density.py](density.py) is now a compatibility launcher that imports the main PyQt window from `adapters/ui/qt_main_window.py`.
 
 ## Features
 
@@ -23,6 +23,7 @@ The application works today as a single-user desktop tool. Pure rules live in `s
 
 ```powershell
 python -m pip install -r requirements.txt
+python -m pip install -e .
 ```
 
 3. Run the desktop app:
@@ -53,7 +54,7 @@ The tests run Qt in offscreen mode and do not display the application window.
 
 ```text
 thermo_components/
-  density.py          # Main application entry point and current monolith
+  density.py          # Compatibility launcher and legacy import aliases
   gui.ui              # Qt Designer source
   gui.py              # Generated PyQt UI module
   lhv_data.py         # SQLite seed helper for LHV data
@@ -80,7 +81,7 @@ The target design is a practical hexagonal architecture:
 - Adapters will isolate PyQt, `thermo`, SQLite, Excel, and packaging concerns.
 - The current UI should remain functional throughout the migration; this is an incremental refactor, not a rewrite branch.
 
-Phases 1 through 4 are complete. The domain package owns pure rules, application use cases coordinate workflows through formal ports, and thermodynamics, SQLite LHV persistence, Excel reporting, resource lookup, desktop dependency composition, and several Qt controllers are isolated outside the launcher. The next refactor target is shrinking or relocating `MainWindow` while keeping `density.py` as a compatibility launcher.
+Phases 1 through 5 are complete. The domain package owns pure rules, application use cases coordinate workflows through formal ports, and thermodynamics, SQLite LHV persistence, Excel reporting, resource lookup, desktop dependency composition, Qt controllers, and `MainWindow` are isolated outside the launcher. The next refactor target is consolidation and packaging cleanup.
 
 ## Development Notes
 

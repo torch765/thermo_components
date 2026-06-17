@@ -8,6 +8,9 @@ from thermo_components.adapters.ui import (
     QtCalculationWorkflowController,
     QtReportRequestBuilder,
 )
+from thermo_components.adapters.ui.qt_main_window import (
+    MainWindow as QtMainWindow,
+)
 from thermo_components.bootstrap import build_desktop_dependencies
 from thermo_components.domain.thermo_routes import PRMIX_DEFAULT_ROUTE
 
@@ -56,6 +59,8 @@ def _sample_result_mapping(**overrides):
 
 
 def test_main_window_accepts_bootstrap_dependencies(qt_app, tmp_path):
+    assert MainWindow is QtMainWindow
+
     dependencies = build_desktop_dependencies(
         lhv_data={"methane": 35.8},
         source_base_dir=tmp_path,

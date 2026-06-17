@@ -14,13 +14,15 @@ The objective is not "DDD for its own sake." The objective is to isolate the eng
 
 ## Current State
 
-Phases 1 through 4 have extracted framework-free rules, application workflows, thermodynamics integration, LHV persistence, resource location, Excel report export, Qt worker/presenter/controller helpers, and desktop dependency composition. The following responsibilities still live in [density.py](../density.py):
+Phases 1 through 5 have extracted framework-free rules, application workflows, thermodynamics integration, LHV persistence, resource location, Excel report export, Qt worker/presenter/controller helpers, desktop dependency composition, and `MainWindow` hosting. [density.py](../density.py) is now a compatibility launcher and legacy import surface.
 
-- `MainWindow` hosting and compatibility launcher behavior
-- calculation thread/progress orchestration
-- flow-tab widget setup and conversion rendering
-- report export request assembly from current UI state
-- remaining PyQt signal coordination
+The remaining desktop-specific responsibilities live in the Qt adapter package:
+
+- `MainWindow` hosting in `adapters/ui/qt_main_window.py`
+- calculation thread/progress orchestration in `adapters/ui/calculation_workflow.py`
+- flow-tab widget setup and conversion rendering in `adapters/ui/flow_tab.py`
+- report export request assembly from current UI state in `adapters/ui/report_request.py`
+- remaining PyQt signal coordination inside `MainWindow`
 
 The extracted domain modules currently own:
 
@@ -45,11 +47,11 @@ Startup resolves `lhv_data.db` through the application-owned `ResourceLocator` p
 
 Report export depends on the application-owned `ReportExporter` port. `OpenPyxlReportExporter` owns workbook layout, formatting, and all direct `openpyxl` imports.
 
-The remaining monolith still creates predictable problems:
+The remaining consolidation risks are now narrower:
 
-- UI code still owns framework coordination and some presentation decisions
-- export and persistence logic are coupled to screen state
-- changing one area raises regression risk in unrelated areas
+- Qt adapter code still owns framework coordination and presentation decisions
+- future web-facing workflows may need UI-independent application facades
+- packaging and compatibility aliases still need cleanup before a final release
 
 ## Architectural Style
 
@@ -140,6 +142,12 @@ src/thermo_components/
   adapters/
     ui/
       qt_main_window.py
+      calculation_workflow.py
+      composition_table.py
+      flow_tab.py
+      report_controller.py
+      report_request.py
+      warning_banner.py
       qt_worker.py
       presenters.py
     thermo/
@@ -269,7 +277,7 @@ The current module should be decomposed as follows:
 | Property calculation orchestration | Extracted | `application/use_cases/calculate_properties.py` |
 | Flow and composition workflows | Extracted | `application/use_cases/convert_flow.py`, `application/use_cases/normalize_composition.py` |
 | Report projection | Extracted | `application/use_cases/prepare_report.py` |
-| Qt thread bridge | Extracted; imported by launcher | `adapters/ui/qt_worker.py` |
+| Qt thread bridge | Extracted | `adapters/ui/qt_worker.py` |
 | `thermo` integration | Extracted; compatibility alias remains | `application/ports/thermo.py`, `adapters/thermo/thermo_gateway.py` |
 | Excel export | Extracted | `application/ports/reporting.py`, `adapters/reporting/openpyxl_report_exporter.py` |
 | Qt report export action | Extracted | `adapters/ui/report_controller.py` |
@@ -278,7 +286,7 @@ The current module should be decomposed as follows:
 | Calculation input collection | Extracted | `adapters/ui/input_collection.py` |
 | Thermo warning banner | Extracted | `adapters/ui/warning_banner.py` |
 | Composition table setup, basis styling, total validation, row/list mutation, and normalization table rendering | Extracted | `adapters/ui/composition_table.py` |
-| Remaining `MainWindow` hosting and workflow coordination | `density.py` plus extracted UI controllers | `adapters/ui/qt_main_window.py`, additional presenters/controllers |
+| `MainWindow` hosting and workflow coordination | Extracted; compatibility launcher remains | `adapters/ui/qt_main_window.py` and supporting UI adapters |
 | Resource lookup | Extracted; compatibility wrapper remains | `application/ports/resources.py`, `adapters/packaging/resource_locator.py` |
 | Desktop dependency composition | Extracted; compatibility launcher remains | `bootstrap/desktop.py` |
 

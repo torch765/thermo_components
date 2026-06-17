@@ -11,6 +11,7 @@ This repository is being converted from a working desktop-script application int
 
 ```powershell
 python -m pip install -r requirements-dev.txt
+python -m pip install -e .
 ```
 
 3. Run the application:
@@ -36,7 +37,7 @@ python -m pytest
 ## Refactor Rules
 
 - Use branch-by-abstraction: introduce new modules behind stable interfaces, then move callers gradually.
-- When extracting logic from `density.py`, prefer pure functions and typed dataclasses first.
+- When extracting logic from `density.py`, keep the root file as a launcher and compatibility import surface.
 - Avoid leaking `PyQt6`, `thermo`, `sqlite3`, or `openpyxl` objects across architectural boundaries.
 - Do not mix UI state manipulation with calculation orchestration in the same new module.
 
