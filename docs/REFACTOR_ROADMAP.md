@@ -16,7 +16,7 @@ This roadmap is designed for incremental execution. The application must remain 
 
 ## Phased Plan
 
-Current status: Phases 0 through 6 and Web Phases 0 through 4A are complete. Web Phase 4B implementation is complete and awaiting a browser smoke test; Phases 4C and 4D remain planned.
+Current status: Phases 0 through 6 and Web Phases 0 through 4B are complete. Web Phases 4C and 4D remain planned before report download.
 
 ### Phase 0: Stabilize and Characterize
 
@@ -294,7 +294,7 @@ Exit criteria:
 
 ### Web Phase 4B: Dual-Basis Composition And Normalization
 
-Status: Implementation complete as of 2026-06-18; browser smoke test pending.
+Status: Complete and browser-tested as of 2026-06-18.
 
 Deliverables:
 
