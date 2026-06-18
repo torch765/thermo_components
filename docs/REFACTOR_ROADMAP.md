@@ -16,7 +16,7 @@ This roadmap is designed for incremental execution. The application must remain 
 
 ## Phased Plan
 
-Current status: Phases 0 through 6 and Web Phases 0 through 4B are complete. Web Phase 4C implementation is complete and awaiting a browser smoke test; Phase 4D remains planned.
+Current status: Phases 0 through 6 and Web Phases 0 through 4C are complete. Web Phase 4D remains planned before report download.
 
 ### Phase 0: Stabilize and Characterize
 
@@ -329,7 +329,7 @@ Exit criteria:
 
 ### Web Phase 4C: Expanded LHV Results
 
-Status: Implementation complete as of 2026-06-18; browser smoke test pending.
+Status: Complete and browser-tested as of 2026-06-18.
 
 Deliverables:
 

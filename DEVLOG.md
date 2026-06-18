@@ -11,6 +11,7 @@
 - Implemented Web Phase 4B with simultaneous Mol %/Wt % columns, derive/normalize endpoints, live server-authoritative updates, active-basis normalization, and stale-result feedback.
 - Closed Web Phase 4B after successful browser testing of simultaneous Mol %/Wt % derivation.
 - Implemented Web Phase 4C with typed expanded LHV output, all existing volumetric and mass-basis units, and missing-data warnings.
+- Closed Web Phase 4C after successful browser testing of the expanded LHV tables.
 
 ### 2026-06-17
 - Started Phase 5 on a dedicated branch with `MainWindow` characterization tests for dependency injection, flow rendering, report request helpers, and calculation result/error lifecycle hooks.
