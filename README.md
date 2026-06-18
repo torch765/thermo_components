@@ -9,6 +9,7 @@ The desktop tool remains fully operational. The web adapter provides a server-re
 ## Features
 
 - Multi-component mixture entry in `Mol %` or `Wt %`
+- Simultaneous Mol %/Wt % display with active-basis normalization
 - Density at selected, normal, and standard conditions
 - Phase and bubble-point calculation
 - Mixture LHV reporting on volumetric and mass bases

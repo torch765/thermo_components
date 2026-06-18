@@ -51,13 +51,17 @@
         <h2>Define the mixture</h2>
       </div>
       <div class="total-indicator" data-total-indicator>
-        <span>Basis total</span>
+        <span><span data-active-basis-label>Mol %</span> total</span>
         <strong data-total-value>100.00%</strong>
       </div>
     </div>
 
-    <form method="post" action="{{ url_for('calculate_page') }}">
-      <fieldset class="basis-fieldset">
+    <form
+      method="post"
+      action="{{ url_for('calculate_page') }}"
+      data-calculator-form
+    >
+      <fieldset class="basis-fieldset" data-basis-selector>
         <legend>Composition basis</legend>
         <label class="segment">
           <input
@@ -81,7 +85,8 @@
 
       <div class="composition-labels" aria-hidden="true">
         <span>Component</span>
-        <span>Percentage</span>
+        <span>Mol %</span>
+        <span>Wt %</span>
         <span></span>
       </div>
 
@@ -102,18 +107,35 @@
               {% endfor %}
             </select>
           </label>
-          <label class="percentage-field">
-            <span class="sr-only">Percentage {{ loop.index }}</span>
+          <label class="percentage-field" data-basis-cell="Mol %">
+            <span class="sr-only">Mole percentage {{ loop.index }}</span>
             <input
               type="number"
-              name="component_percentage"
-              value="{{ row.percentage }}"
+              name="component_mole_percentage"
+              value="{{ row.mole_percentage }}"
               min="0"
               max="100"
               step="any"
               inputmode="decimal"
               placeholder="0.00"
               data-percentage-input
+              data-basis-input="Mol %"
+            >
+            <span>%</span>
+          </label>
+          <label class="percentage-field" data-basis-cell="Wt %">
+            <span class="sr-only">Weight percentage {{ loop.index }}</span>
+            <input
+              type="number"
+              name="component_weight_percentage"
+              value="{{ row.weight_percentage }}"
+              min="0"
+              max="100"
+              step="any"
+              inputmode="decimal"
+              placeholder="0.00"
+              data-percentage-input
+              data-basis-input="Wt %"
             >
             <span>%</span>
           </label>
@@ -127,10 +149,21 @@
         {% endfor %}
       </div>
 
-      <button class="text-button" type="button" data-add-row>
-        <span aria-hidden="true">+</span>
-        Add component
-      </button>
+      <div class="composition-actions">
+        <button class="text-button" type="button" data-add-row>
+          <span aria-hidden="true">+</span>
+          Add component
+        </button>
+        <button class="secondary-button" type="button" data-normalize>
+          Normalize active basis
+        </button>
+      </div>
+      <p
+        class="composition-feedback"
+        data-composition-feedback
+        role="status"
+        aria-live="polite"
+      ></p>
 
       <div class="section-rule"></div>
 
@@ -200,6 +233,9 @@
   <section class="panel results-panel" aria-live="polite">
     {% if result %}
       {% set calculation = result.calculation %}
+      <div class="stale-notice" data-stale-notice>
+        Inputs changed. Run the calculation again to refresh these results.
+      </div>
       <div class="results-heading">
         <div>
           <p class="section-number">03 / Results</p>
@@ -387,17 +423,33 @@
         {% endfor %}
       </select>
     </label>
-    <label class="percentage-field">
-      <span class="sr-only">Percentage</span>
+    <label class="percentage-field" data-basis-cell="Mol %">
+      <span class="sr-only">Mole percentage</span>
       <input
         type="number"
-        name="component_percentage"
+        name="component_mole_percentage"
         min="0"
         max="100"
         step="any"
         inputmode="decimal"
         placeholder="0.00"
         data-percentage-input
+        data-basis-input="Mol %"
+      >
+      <span>%</span>
+    </label>
+    <label class="percentage-field" data-basis-cell="Wt %">
+      <span class="sr-only">Weight percentage</span>
+      <input
+        type="number"
+        name="component_weight_percentage"
+        min="0"
+        max="100"
+        step="any"
+        inputmode="decimal"
+        placeholder="0.00"
+        data-percentage-input
+        data-basis-input="Wt %"
       >
       <span>%</span>
     </label>

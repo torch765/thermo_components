@@ -71,7 +71,7 @@ async def submit_calculator(request: Request) -> HTMLResponse:
 
     return _render_calculator(
         request,
-        form_state=form_state,
+        form_state=_form_state_with_result(form_state, result),
         result=result,
     )
 
@@ -100,8 +100,16 @@ def _render_calculator(
 def _default_form_state() -> dict:
     return {
         "rows": [
-            {"name": "methane", "percentage": "100"},
-            {"name": "", "percentage": ""},
+            {
+                "name": "methane",
+                "mole_percentage": "100",
+                "weight_percentage": "100",
+            },
+            {
+                "name": "",
+                "mole_percentage": "",
+                "weight_percentage": "",
+            },
         ],
         "basis": "Mol %",
         "temperature_c": "25",
@@ -113,20 +121,29 @@ def _default_form_state() -> dict:
 
 def _form_state_from_submission(form) -> dict:
     component_names = form.getlist("component_name")
-    percentages = form.getlist("component_percentage")
+    mole_percentages = form.getlist("component_mole_percentage")
+    weight_percentages = form.getlist("component_weight_percentage")
     rows = [
         {
             "name": str(name).strip(),
-            "percentage": str(percentage).strip(),
+            "mole_percentage": str(mole_percentage).strip(),
+            "weight_percentage": str(weight_percentage).strip(),
         }
-        for name, percentage in zip_longest(
+        for name, mole_percentage, weight_percentage in zip_longest(
             component_names,
-            percentages,
+            mole_percentages,
+            weight_percentages,
             fillvalue="",
         )
     ]
     if not rows:
-        rows = [{"name": "", "percentage": ""}]
+        rows = [
+            {
+                "name": "",
+                "mole_percentage": "",
+                "weight_percentage": "",
+            }
+        ]
 
     return {
         "rows": rows,
@@ -144,7 +161,11 @@ def _payload_from_form_state(form_state: dict) -> CalculationRequestSchema:
     components = []
     for row in form_state["rows"]:
         name = row["name"]
-        percentage = row["percentage"]
+        percentage = (
+            row["mole_percentage"]
+            if form_state["basis"] == "Mol %"
+            else row["weight_percentage"]
+        )
         if not name and not percentage:
             continue
         if not name or not percentage:
@@ -176,6 +197,32 @@ def _payload_from_form_state(form_state: dict) -> CalculationRequestSchema:
             ),
         }
     )
+
+
+def _form_state_with_result(form_state: dict, result) -> dict:
+    calculation = result.calculation
+    rows = [
+        {
+            "name": component_name,
+            "mole_percentage": _format_percentage(
+                calculation.mole_percents[index]
+            ),
+            "weight_percentage": _format_percentage(
+                calculation.weight_percents[index]
+            ),
+        }
+        for index, component_name in enumerate(
+            calculation.component_names
+        )
+    ]
+    return {
+        **form_state,
+        "rows": rows,
+    }
+
+
+def _format_percentage(value: float) -> str:
+    return f"{value:.4f}".rstrip("0").rstrip(".")
 
 
 def _format_errors(exc: ValidationError | ValueError) -> tuple[str, ...]:

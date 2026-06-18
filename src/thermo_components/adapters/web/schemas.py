@@ -75,6 +75,41 @@ class CalculationRequestSchema(WebSchema):
         return self
 
 
+class CompositionDeriveRequestSchema(WebSchema):
+    components: list[ComponentInputSchema] = Field(min_length=1)
+    basis: CompositionBasisValue
+
+    @model_validator(mode="after")
+    def validate_unique_components(self) -> "CompositionDeriveRequestSchema":
+        component_names = [component.name for component in self.components]
+        if len(set(component_names)) != len(component_names):
+            raise ValueError("Duplicate components are not allowed.")
+        return self
+
+
+class CompositionDeriveResponseSchema(WebSchema):
+    percentages: list[float | None]
+
+
+class CompositionNormalizeRequestSchema(WebSchema):
+    percentages: list[float] = Field(min_length=1)
+    precision: int = Field(default=4, ge=0, le=8)
+
+    @field_validator("percentages")
+    @classmethod
+    def validate_non_negative_percentages(
+        cls,
+        values: list[float],
+    ) -> list[float]:
+        if any(value < 0 for value in values):
+            raise ValueError("Percentages cannot be negative.")
+        return values
+
+
+class CompositionNormalizeResponseSchema(WebSchema):
+    percentages: list[float]
+
+
 class DensityResultSchema(WebSchema):
     value: DensityValue
     phase: str | None

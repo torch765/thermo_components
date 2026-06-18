@@ -1,7 +1,7 @@
 """Composition root for the FastAPI web application."""
 
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from thermo_components.adapters.packaging import RuntimeResourceLocator
@@ -11,6 +11,7 @@ from thermo_components.application.services import CalculationSessionService
 from thermo_components.application.use_cases import (
     CalculatePropertiesUseCase,
     DeriveCompositionUseCase,
+    NormalizeCompositionUseCase,
     PrepareReportUseCase,
 )
 
@@ -22,6 +23,9 @@ class WebDependencies:
     lhv_database: Mapping[str, float]
     derive_composition_use_case: DeriveCompositionUseCase
     calculation_session_factory: Callable[[str], CalculationSessionService]
+    normalize_composition_use_case: NormalizeCompositionUseCase = field(
+        default_factory=NormalizeCompositionUseCase
+    )
 
 
 def build_web_dependencies(
@@ -62,5 +66,6 @@ def build_web_dependencies(
     return WebDependencies(
         lhv_database=loaded_lhv_data,
         derive_composition_use_case=DeriveCompositionUseCase(),
+        normalize_composition_use_case=NormalizeCompositionUseCase(),
         calculation_session_factory=build_calculation_session,
     )

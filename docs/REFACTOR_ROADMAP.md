@@ -16,7 +16,7 @@ This roadmap is designed for incremental execution. The application must remain 
 
 ## Phased Plan
 
-Current status: Phases 0 through 6 and Web Phases 0 through 4A are complete. Web desktop-parity increments 4B through 4D are planned before report download.
+Current status: Phases 0 through 6 and Web Phases 0 through 4A are complete. Web Phase 4B implementation is complete and awaiting a browser smoke test; Phases 4C and 4D remain planned.
 
 ### Phase 0: Stabilize and Characterize
 
@@ -294,6 +294,8 @@ Exit criteria:
 
 ### Web Phase 4B: Dual-Basis Composition And Normalization
 
+Status: Implementation complete as of 2026-06-18; browser smoke test pending.
+
 Deliverables:
 
 - Show `Mol %` and `Wt %` columns simultaneously.
@@ -302,6 +304,15 @@ Deliverables:
 - Add a Normalize action backed by `NormalizeCompositionUseCase`.
 - Update both columns and the active total without running a full thermo calculation.
 - Mark displayed calculation results as stale when composition changes.
+
+Completed:
+
+- Added typed derive and normalize API endpoints.
+- Added simultaneous `Mol %` and `Wt %` form columns.
+- Added debounced server-derived inactive-basis updates.
+- Added active-basis switching, normalization feedback, and stale-result marking.
+- Preserved server-rendered calculation fallback with both basis columns.
+- Added endpoint, mole-basis, weight-basis, normalization, and error tests.
 
 Implementation notes:
 

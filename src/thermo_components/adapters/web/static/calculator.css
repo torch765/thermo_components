@@ -346,7 +346,7 @@ a {
 .composition-labels,
 .composition-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 150px 36px;
+  grid-template-columns: minmax(0, 1fr) 112px 112px 36px;
   gap: 10px;
 }
 
@@ -404,6 +404,23 @@ input:focus {
   text-align: right;
 }
 
+.percentage-field.is-derived input {
+  border-color: #d9dcd6;
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      #eef0eb,
+      #eef0eb 6px,
+      #f5f6f2 6px,
+      #f5f6f2 12px
+    );
+  color: var(--ink-soft);
+}
+
+.percentage-field.is-active input {
+  border-color: rgba(13, 111, 112, 0.5);
+}
+
 .percentage-field > span,
 .unit-input strong {
   position: absolute;
@@ -450,6 +467,45 @@ input:focus {
 .text-button span {
   font-size: 19px;
   font-weight: 400;
+}
+
+.composition-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.secondary-button {
+  padding: 9px 12px;
+  border: 1px solid var(--teal);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--teal-deep);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.secondary-button:hover {
+  background: rgba(13, 111, 112, 0.08);
+}
+
+.composition-feedback {
+  min-height: 18px;
+  margin: 7px 0 0;
+  color: var(--ink-soft);
+  font-size: 11px;
+}
+
+.composition-feedback.success {
+  color: var(--teal-deep);
+}
+
+.composition-feedback.error {
+  color: var(--error);
 }
 
 .section-rule {
@@ -546,6 +602,23 @@ input:focus {
 
 .results-heading {
   padding: 26px 28px 18px;
+}
+
+.stale-notice {
+  display: none;
+  padding: 11px 28px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(197, 104, 59, 0.2);
+  color: #f4d5c4;
+  font-size: 12px;
+}
+
+.results-panel.is-stale .stale-notice {
+  display: block;
+}
+
+.results-panel.is-stale > :not(.stale-notice) {
+  opacity: 0.72;
 }
 
 .results-heading .section-number {
@@ -982,8 +1055,14 @@ input:focus {
   }
 
   .composition-row {
-    grid-template-columns: 1fr 112px 30px;
+    grid-template-columns: minmax(132px, 1fr) 82px 82px 28px;
     gap: 7px;
+  }
+
+  .composition-actions {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
   }
 
   .condition-grid {

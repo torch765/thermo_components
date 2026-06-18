@@ -1,6 +1,6 @@
 # Web App Design Basis
 
-Status: Accepted for MVP planning. Web Phase 4 is implemented and awaiting a browser smoke test.
+Status: Accepted for MVP planning. Web Phase 4B is implemented and awaiting a browser smoke test.
 
 ## Purpose
 
@@ -373,9 +373,13 @@ Status: Complete and browser-tested as of 2026-06-18.
 
 ### Web Phase 4B: Dual-Basis Composition And Normalization
 
+Status: Implementation complete as of 2026-06-18; browser smoke test pending.
+
 - Render both composition bases.
 - Add derive and normalize endpoints.
 - Add live updates and result-staleness behavior.
+- Endpoints: `POST /api/compositions/derive` and
+  `POST /api/compositions/normalize`.
 
 ### Web Phase 4C: Expanded LHV Results
 

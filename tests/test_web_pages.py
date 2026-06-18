@@ -20,7 +20,8 @@ def build_client() -> TestClient:
 def methane_form(**overrides):
     form = {
         "component_name": "methane",
-        "component_percentage": "100",
+        "component_mole_percentage": "100",
+        "component_weight_percentage": "100",
         "basis": "Mol %",
         "temperature_c": "25",
         "pressure_atm": "1",
@@ -43,6 +44,9 @@ def test_calculator_page_renders_default_form():
     )
     assert 'name="temperature_c"' in response.text
     assert 'value="25"' in response.text
+    assert 'name="component_mole_percentage"' in response.text
+    assert 'name="component_weight_percentage"' in response.text
+    assert "Normalize active basis" in response.text
 
 
 def test_calculator_alias_and_static_assets_are_available():
@@ -79,8 +83,10 @@ def test_calculator_form_accepts_multiple_component_rows():
         [
             ("component_name", "methane"),
             ("component_name", "ethane"),
-            ("component_percentage", "50"),
-            ("component_percentage", "50"),
+            ("component_mole_percentage", "50"),
+            ("component_mole_percentage", "50"),
+            ("component_weight_percentage", "34.7864"),
+            ("component_weight_percentage", "65.2136"),
             ("basis", "Mol %"),
             ("temperature_c", "25"),
             ("pressure_atm", "1"),
@@ -100,10 +106,42 @@ def test_calculator_form_accepts_multiple_component_rows():
     assert len(re.findall(r"50\.000\s+%", response.text)) == 2
 
 
+def test_calculator_form_uses_weight_basis_and_repopulates_both_columns():
+    payload = urlencode(
+        [
+            ("component_name", "methane"),
+            ("component_name", "ethane"),
+            ("component_mole_percentage", ""),
+            ("component_mole_percentage", ""),
+            ("component_weight_percentage", "50"),
+            ("component_weight_percentage", "50"),
+            ("basis", "Wt %"),
+            ("temperature_c", "25"),
+            ("pressure_atm", "1"),
+            ("model", "PRMIX"),
+        ]
+    )
+
+    response = build_client().post(
+        "/calculator",
+        content=payload,
+        headers={"content-type": "application/x-www-form-urlencoded"},
+    )
+
+    assert response.status_code == 200
+    assert re.search(
+        r'name="basis"\s+value="Wt %"\s+checked',
+        response.text,
+    )
+    assert 'name="component_mole_percentage"' in response.text
+    assert 'name="component_weight_percentage"' in response.text
+    assert "Calculated properties" in response.text
+
+
 def test_calculator_form_preserves_input_and_renders_validation_error():
     response = build_client().post(
         "/calculator",
-        data=methane_form(component_percentage="90"),
+        data=methane_form(component_mole_percentage="90"),
     )
 
     assert response.status_code == 422
