@@ -408,6 +408,7 @@ Status: Complete and browser-tested as of 2026-06-18.
 
 ### Web Phase 6: DigitalOcean Deployment
 
+- Add `.do/app.yaml` and pin the supported Python runtime.
 - Add App Platform notes or app spec.
 - Confirm build and runtime command.
 - Deploy from GitHub.

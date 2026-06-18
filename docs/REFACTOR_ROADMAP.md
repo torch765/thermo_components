@@ -433,11 +433,27 @@ Exit criteria:
 
 ### Web Phase 6: DigitalOcean Deployment
 
+Status: In progress as of 2026-06-18.
+
 Deliverables:
 
 - Add App Platform deployment notes or app spec.
 - Confirm build/start command.
 - Deploy from GitHub.
+
+Completed:
+
+- Added `.do/app.yaml` for the Python web service.
+- Pinned Python 3.13.12 through `runtime.txt`.
+- Configured the Uvicorn `$PORT` startup command and `/health` readiness
+  check.
+- Added control-panel, pricing, resource, and smoke-test guidance.
+
+Next:
+
+- Push the completed local `main` history to GitHub.
+- Create the App Platform application from the GitHub repository.
+- Monitor the first build and runtime deployment.
 
 Exit criteria:
 

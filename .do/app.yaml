@@ -1,0 +1,32 @@
+name: thermo-components
+features:
+  - buildpack-stack=ubuntu-22
+alerts:
+  - rule: DEPLOYMENT_FAILED
+  - rule: DOMAIN_FAILED
+services:
+  - name: web
+    environment_slug: python
+    github:
+      repo: torch765/thermo_components
+      branch: main
+      deploy_on_push: true
+    source_dir: /
+    run_command: python -m uvicorn thermo_components.adapters.web.app:app --host 0.0.0.0 --port $PORT
+    http_port: 8080
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-0.5gb
+    health_check:
+      http_path: /health
+      initial_delay_seconds: 20
+      period_seconds: 10
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 6
+ingress:
+  rules:
+    - component:
+        name: web
+      match:
+        path:
+          prefix: /
