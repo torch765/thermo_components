@@ -19,6 +19,7 @@ The desktop tool remains fully operational. The web adapter provides a server-re
 - JSON calculation API with typed validation and no PyQt dependency
 - Complete volumetric and mass-basis LHV unit table
 - Stateless web flow-conversion workspace with all desktop units
+- Temporary Excel report downloads from the web calculator
 
 ## Quick Start
 
@@ -101,7 +102,7 @@ The target design is a practical hexagonal architecture:
 - Adapters will isolate PyQt, `thermo`, SQLite, Excel, and packaging concerns.
 - The current UI should remain functional throughout the migration; this is an incremental refactor, not a rewrite branch.
 
-Desktop Phases 1 through 6 and Web Phases 0 through 4D are complete. Web Phase 5 report download is next. The HTML form and JSON API share one calculation handler and use request-scoped thermo gateways to avoid shared calculation state.
+Desktop Phases 1 through 6 and Web Phases 0 through 5 are complete. Web Phase 6 deployment is next. The HTML form and JSON API share one calculation handler and use request-scoped thermo gateways to avoid shared calculation state.
 
 ## Development Notes
 

@@ -1,6 +1,6 @@
 # Web App Design Basis
 
-Status: Accepted for MVP planning. Web Phase 4D is complete and browser-tested.
+Status: Accepted for MVP planning. Web Phase 5 is complete and browser-tested.
 
 ## Purpose
 
@@ -399,6 +399,8 @@ Status: Complete and browser-tested as of 2026-06-18.
 - Carry latest calculation densities in browser session state.
 
 ### Web Phase 5: Report Download
+
+Status: Complete and browser-tested as of 2026-06-18.
 
 - Add report download endpoint.
 - Ensure no persistent local report storage.

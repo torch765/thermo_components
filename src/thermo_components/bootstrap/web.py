@@ -2,11 +2,14 @@
 
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 
 from thermo_components.adapters.packaging import RuntimeResourceLocator
 from thermo_components.adapters.persistence import SqliteLhvRepository
+from thermo_components.adapters.reporting import OpenPyxlReportExporter
 from thermo_components.adapters.thermo import ThermoGateway
+from thermo_components.application.ports import ReportExporter
 from thermo_components.application.services import CalculationSessionService
 from thermo_components.application.use_cases import (
     CalculatePropertiesUseCase,
@@ -30,6 +33,10 @@ class WebDependencies:
     convert_flow_use_case: ConvertFlowUseCase = field(
         default_factory=ConvertFlowUseCase
     )
+    report_exporter: ReportExporter = field(
+        default_factory=OpenPyxlReportExporter
+    )
+    report_clock: Callable[[], datetime] = datetime.now
 
 
 def build_web_dependencies(
@@ -72,5 +79,6 @@ def build_web_dependencies(
         derive_composition_use_case=DeriveCompositionUseCase(),
         normalize_composition_use_case=NormalizeCompositionUseCase(),
         convert_flow_use_case=ConvertFlowUseCase(),
+        report_exporter=OpenPyxlReportExporter(),
         calculation_session_factory=build_calculation_session,
     )

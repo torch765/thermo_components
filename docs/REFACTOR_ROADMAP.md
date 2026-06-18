@@ -16,7 +16,7 @@ This roadmap is designed for incremental execution. The application must remain 
 
 ## Phased Plan
 
-Current status: Phases 0 through 6 and Web Phases 0 through 4D are complete. Web Phase 5 report download is next.
+Current status: Phases 0 through 6 and Web Phases 0 through 5 are complete. Web Phase 6 deployment is next.
 
 ### Phase 0: Stabilize and Characterize
 
@@ -396,7 +396,7 @@ Completed:
 
 Next:
 
-- Start Web Phase 5 report download.
+- Start Web Phase 6 deployment preparation.
 
 Exit criteria:
 
@@ -406,10 +406,26 @@ Exit criteria:
 
 ### Web Phase 5: Report Download
 
+Status: Complete and browser-tested as of 2026-06-18.
+
 Deliverables:
 
 - Add report download endpoint.
 - Generate reports per request without persistent local storage.
+
+Completed:
+
+- Added `POST /calculator/report`.
+- Regenerated the submitted calculation with report projection enabled.
+- Reused `OpenPyxlReportExporter` and the typed `ReportExportRequest`.
+- Streamed timestamped `.xlsx` attachments from OS temporary files.
+- Deleted generated files after each response.
+- Added workbook-content, response-header, cleanup, validation, bootstrap,
+  and page tests.
+
+Next:
+
+- Start Web Phase 6 DigitalOcean deployment preparation.
 
 Exit criteria:
 

@@ -14,6 +14,8 @@
 - Closed Web Phase 4C after successful browser testing of the expanded LHV tables.
 - Implemented Web Phase 4D with a dedicated flow workspace, typed conversion API, all 17 desktop units, browser-session density handoff, manual density overrides, and stateless server requests.
 - Closed Web Phase 4D after successful browser testing and compacted the converted-flow result panel.
+- Implemented Web Phase 5 with temporary Excel report generation, calculator download controls, typed report-request mapping, response cleanup, and workbook-content tests.
+- Closed Web Phase 5 after successful browser download and workbook testing.
 
 ### 2026-06-17
 - Started Phase 5 on a dedicated branch with `MainWindow` characterization tests for dependency injection, flow rendering, report request helpers, and calculation result/error lifecycle hooks.

@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import cast
 
 from fastapi import APIRouter, Request, status
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
 
@@ -16,6 +16,7 @@ from .calculation import (
     WebCalculationDependencies,
     execute_web_calculation,
 )
+from .reporting import WebReportDependencies, create_report_download
 from .schemas import CalculationRequestSchema
 
 
@@ -90,6 +91,40 @@ async def submit_calculator(request: Request) -> HTMLResponse:
         form_state=_form_state_with_result(form_state, result),
         result=result,
     )
+
+
+@page_router.post(
+    "/calculator/report",
+    name="download_report",
+)
+async def download_report(request: Request) -> Response:
+    form = await request.form()
+    form_state = _form_state_from_submission(form)
+
+    try:
+        payload = _payload_from_form_state(form_state).model_copy(
+            update={"include_report_projection": True}
+        )
+        dependencies = cast(
+            WebReportDependencies,
+            request.app.state.dependencies,
+        )
+        result = execute_web_calculation(payload, dependencies)
+        return create_report_download(payload, result, dependencies)
+    except (ValidationError, ValueError) as exc:
+        return _render_calculator(
+            request,
+            form_state=form_state,
+            errors=_format_errors(exc),
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        )
+    except Exception:
+        return _render_calculator(
+            request,
+            form_state=form_state,
+            errors=("The Excel report could not be generated.",),
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
 
 def _render_calculator(

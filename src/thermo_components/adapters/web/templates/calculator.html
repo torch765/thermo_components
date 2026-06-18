@@ -57,6 +57,7 @@
     </div>
 
     <form
+      id="calculator-form"
       method="post"
       action="{{ url_for('calculate_page') }}"
       data-calculator-form
@@ -210,18 +211,6 @@
           </div>
         </label>
       </div>
-
-      <label class="check-row">
-        <input
-          type="checkbox"
-          name="include_report_projection"
-          {% if form_state.include_report_projection %}checked{% endif %}
-        >
-        <span>
-          <strong>Prepare report data</strong>
-          <small>Include report rows for the upcoming download workflow.</small>
-        </span>
-      </label>
 
       <button class="primary-button" type="submit">
         <span>Run calculation</span>
@@ -438,18 +427,24 @@
         </div>
       </div>
 
-      {% if result.report_projection %}
       <div class="report-ready">
-        <span aria-hidden="true">✓</span>
+        <span aria-hidden="true">↓</span>
         <div>
-          <strong>Report data prepared</strong>
+          <strong>Excel report</strong>
           <small>
-            {{ result.report_projection.result_rows|length }} result rows are
-            ready for the Phase 5 download endpoint.
+            Regenerates this calculation and downloads a temporary workbook.
           </small>
         </div>
+        <button
+          class="report-download-button"
+          type="submit"
+          form="calculator-form"
+          formaction="{{ url_for('download_report') }}"
+          formmethod="post"
+        >
+          Download .xlsx
+        </button>
       </div>
-      {% endif %}
     {% else %}
       <div class="results-empty">
         <div class="orbital-mark" aria-hidden="true">

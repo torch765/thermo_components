@@ -896,6 +896,28 @@ input:focus {
   color: #aac8c5;
 }
 
+.report-ready div {
+  flex: 1;
+}
+
+.report-download-button {
+  flex: 0 0 auto;
+  padding: 10px 13px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 8px;
+  background: var(--paper-bright);
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.report-download-button:hover {
+  background: var(--white);
+}
+
 .results-empty {
   display: flex;
   min-height: 620px;
@@ -1351,6 +1373,15 @@ input:focus {
 
   .lhv-grid {
     grid-template-columns: 1fr;
+  }
+
+  .report-ready {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .report-download-button {
+    width: 100%;
   }
 
   .result-split .result-section + .result-section {

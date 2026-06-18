@@ -226,12 +226,13 @@ def test_calculator_form_preserves_input_and_renders_validation_error():
     )
 
 
-def test_calculator_form_can_prepare_report_projection():
+def test_calculator_form_offers_excel_report_download():
     response = build_client().post(
         "/calculator",
-        data=methane_form(include_report_projection="on"),
+        data=methane_form(),
     )
 
     assert response.status_code == 200
-    assert "Report data prepared" in response.text
-    assert "result rows are" in response.text
+    assert "Excel report" in response.text
+    assert "Download .xlsx" in response.text
+    assert 'formaction="http://testserver/calculator/report"' in response.text
