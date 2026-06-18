@@ -163,13 +163,13 @@ a {
 }
 
 .hero h1 {
-  max-width: 680px;
+  max-width: 620px;
   margin: 0;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(42px, 4.8vw, 68px);
+  font-size: clamp(38px, 3.7vw, 54px);
   font-weight: 400;
-  letter-spacing: -0.055em;
-  line-height: 0.97;
+  letter-spacing: -0.045em;
+  line-height: 1;
 }
 
 .hero h1 em {
