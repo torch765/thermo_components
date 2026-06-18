@@ -42,8 +42,11 @@ Reference docs:
 The first online version should support:
 
 - A calculator form for components, basis, composition, temperature, pressure, and model.
+- Simultaneous `Mol %` and `Wt %` display with one editable active basis.
+- Composition normalization to exactly 100%.
 - Server-side validation with clear error messages.
 - A results page showing the same major calculated values as the desktop app.
+- The complete existing LHV unit set on volumetric and mass bases.
 - Flow conversion using the latest calculated normal and standard densities where applicable.
 - Excel report download for the current calculation.
 - Basic health check endpoint for deployment monitoring.
@@ -169,6 +172,22 @@ calculation route and provides the backend contract for the HTML form.
 
 `POST /calculator/report` regenerates the calculation from submitted form data and streams an Excel file.
 
+Planned desktop-parity API routes:
+
+```text
+POST /api/compositions/derive
+POST /api/compositions/normalize
+POST /api/flow-conversions
+GET  /flow
+```
+
+The composition endpoints call the existing application use cases. The browser
+must not contain a second copy of molecular-weight conversion or normalization
+rules.
+
+The flow endpoint accepts the input value, source/destination units, and the
+latest normal/standard density values. The server remains stateless.
+
 ## Calculation API Contract
 
 `POST /api/calculations` accepts one percentage value per component on the
@@ -198,6 +217,62 @@ The response contains:
 The web adapter derives the inactive composition basis through
 `DeriveCompositionUseCase`. It creates a fresh thermo gateway for every
 calculation request because the gateway holds mutable composition state.
+
+## Desktop-Parity Interaction Design
+
+### Dual-Basis Composition
+
+The calculator should render three columns:
+
+```text
+Component | Mol % | Wt %
+```
+
+- The selected basis column is editable.
+- The inactive column is read-only and visually distinct.
+- Component or percentage edits trigger a debounced derive request.
+- Switching basis makes the currently displayed derived values editable and
+  derives the other column.
+- Any composition change marks existing thermo results as stale until the user
+  recalculates.
+
+This is progressive enhancement. A user without JavaScript can still submit
+the existing active-basis form and receive a calculation.
+
+### Normalization
+
+Normalize operates only on the active basis:
+
+1. Send active percentages to `NormalizeCompositionUseCase`.
+2. Replace the active values with the normalized response.
+3. Recalculate the inactive basis through `DeriveCompositionUseCase`.
+4. Show a concise success or zero-total validation message.
+5. Invalidate stale calculation and flow-density state.
+
+### LHV Presentation
+
+Use `build_lhv_display_values` as the only conversion source. Present the base
+`MJ/Nm³` value prominently and the remaining volumetric and mass-basis values
+in a compact engineering table or expandable section.
+
+Do not calculate LHV unit conversions in Jinja templates or JavaScript.
+
+### Flow Workspace
+
+The Flow workspace should be reachable from the primary navigation and use
+`ConvertFlowUseCase` through a JSON endpoint.
+
+- Populate source and destination units from `FLOW_UNIT_ORDER`.
+- Default to `kg/h` and `t/d`.
+- Recalculate after value or unit changes with a short debounce.
+- Store latest normal and standard densities in browser `sessionStorage`.
+- Send densities with each request rather than storing user state on the
+  server.
+- Show the density values being used and permit manual override.
+- Keep mass-to-mass and same-reference conversions available without a prior
+  property calculation.
+- Show the existing domain error messages when normal or standard density is
+  required.
 
 ## Report Download Strategy
 
@@ -286,15 +361,33 @@ Status: Complete as of 2026-06-18.
 - Add request-scoped thermo composition through `bootstrap/web.py`.
 - Implement `POST /api/calculations`.
 
-### Web Phase 4: Server-Rendered UI
+### Web Phase 4A: Core Server-Rendered UI
 
-Status: Implementation complete as of 2026-06-18; browser smoke test pending.
+Status: Complete and browser-tested as of 2026-06-18.
 
 - Add calculator template and styling.
 - Render results and warnings.
 - Keep design functional before polishing visuals.
 - Reuse the calculation API handler rather than duplicating workflow mapping.
 - Serve the calculator at `/` and `/calculator`.
+
+### Web Phase 4B: Dual-Basis Composition And Normalization
+
+- Render both composition bases.
+- Add derive and normalize endpoints.
+- Add live updates and result-staleness behavior.
+
+### Web Phase 4C: Expanded LHV Results
+
+- Add the complete volumetric and mass-basis LHV table.
+- Reuse domain display-value rules.
+- Test web values against desktop/domain expectations.
+
+### Web Phase 4D: Flow Conversion Workspace
+
+- Add `/flow` and `POST /api/flow-conversions`.
+- Reuse `ConvertFlowUseCase` and all existing flow units.
+- Carry latest calculation densities in browser session state.
 
 ### Web Phase 5: Report Download
 

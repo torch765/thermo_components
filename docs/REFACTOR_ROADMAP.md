@@ -16,7 +16,7 @@ This roadmap is designed for incremental execution. The application must remain 
 
 ## Phased Plan
 
-Current status: Phases 0 through 6 and Web Phases 0 through 3 are complete. Web Phase 4 implementation is complete and awaiting a browser smoke test.
+Current status: Phases 0 through 6 and Web Phases 0 through 4A are complete. Web desktop-parity increments 4B through 4D are planned before report download.
 
 ### Phase 0: Stabilize and Characterize
 
@@ -271,9 +271,9 @@ Exit criteria:
 
 - A user can run a calculation without PyQt.
 
-### Web Phase 4: Server-Rendered UI
+### Web Phase 4A: Core Server-Rendered UI
 
-Status: Implementation complete as of 2026-06-18; browser smoke test pending.
+Status: Complete and browser-tested as of 2026-06-18.
 
 Deliverables:
 
@@ -291,6 +291,77 @@ Completed:
 Exit criteria:
 
 - The MVP is usable from a browser with no JavaScript framework.
+
+### Web Phase 4B: Dual-Basis Composition And Normalization
+
+Deliverables:
+
+- Show `Mol %` and `Wt %` columns simultaneously.
+- Keep the selected basis editable and the derived basis read-only.
+- Derive the inactive basis through `DeriveCompositionUseCase`.
+- Add a Normalize action backed by `NormalizeCompositionUseCase`.
+- Update both columns and the active total without running a full thermo calculation.
+- Mark displayed calculation results as stale when composition changes.
+
+Implementation notes:
+
+- Add typed composition derive/normalize web schemas and endpoints.
+- Use small debounced browser requests; do not duplicate molecular-weight formulas in JavaScript.
+- On basis change, activate the displayed derived column and derive the other column.
+- Preserve a no-JavaScript fallback through the existing calculator form.
+
+Exit criteria:
+
+- Editing either active basis updates the other basis consistently.
+- Normalize scales the active basis to exactly 100% and refreshes the derived basis.
+- Zero-total and incomplete-row errors are clear and non-destructive.
+
+### Web Phase 4C: Expanded LHV Results
+
+Deliverables:
+
+- Display all existing volumetric LHV units:
+  - `MJ/Nm³`
+  - `kcal/Nm³`
+  - `MMkcal/Nm³`
+  - `GJ/Nm³`
+  - `MMBtu/Nm³`
+- Display all existing mass-basis LHV units:
+  - `MJ/kg`, `MJ/t`, `GJ/kg`, `GJ/t`
+  - `kcal/kg`, `kcal/t`, `MMkcal/kg`, `MMkcal/t`
+  - `MMBtu/kg`, `MMBtu/t`
+- Reuse `build_lhv_display_values`; do not reproduce conversion constants in templates or JavaScript.
+- Render missing-LHV warnings prominently.
+
+Exit criteria:
+
+- Web LHV values match desktop/domain values for representative mixtures.
+- Units with unavailable data render as `N/A` rather than misleading zeroes.
+
+### Web Phase 4D: Flow Conversion Workspace
+
+Deliverables:
+
+- Add a dedicated Flow page or primary workspace section.
+- Expose all units in `FLOW_UNIT_ORDER`.
+- Add `POST /api/flow-conversions` backed by `ConvertFlowUseCase`.
+- Update the result immediately when value or units change.
+- Reuse the latest calculated normal and standard densities.
+- Allow density-independent conversions before a property calculation.
+- Show clear density-required messages for conversions that need unavailable state.
+
+Implementation notes:
+
+- Keep the server stateless: send densities with each conversion request.
+- Store the latest calculation densities in browser session state for navigation to the Flow page.
+- Provide visible normal/standard density context and optional manual overrides.
+- Add swap and copy controls only after the core conversion path is tested.
+
+Exit criteria:
+
+- All 17 desktop flow units are available online.
+- Mass, same-reference-volume, mass/volume, and cross-reference conversions match domain tests.
+- Flow conversion never imports or calls PyQt code.
 
 ### Web Phase 5: Report Download
 
