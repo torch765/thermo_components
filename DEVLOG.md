@@ -4,6 +4,8 @@
 - Merged Web Phase 2 into `main` after a successful local `/health` smoke test.
 - Completed Web Phase 3 with typed calculation schemas, `POST /api/calculations`, web presenters, request-scoped thermo composition, validation/error mapping, and a real methane endpoint test.
 - Made bootstrap desktop exports lazy so importing the FastAPI application does not load PyQt.
+- Merged Web Phase 3 into `main` after a successful Swagger calculation smoke test.
+- Implemented Web Phase 4 with Jinja2 calculator pages, responsive project CSS, dynamic composition rows, server-rendered results, validation feedback, and shared HTML/API calculation handling.
 
 ### 2026-06-17
 - Started Phase 5 on a dedicated branch with `MainWindow` characterization tests for dependency injection, flow rendering, report request helpers, and calculation result/error lifecycle hooks.

@@ -1,0 +1,412 @@
+{% extends "base.html" %}
+
+{% block title %}Mixture Calculator · Thermo Components{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <div class="hero-copy">
+    <p class="eyebrow">Web calculation workspace</p>
+    <h1>Mixture properties,<br><em>clearly resolved.</em></h1>
+    <p class="hero-summary">
+      Define a composition and operating point. The same tested calculation
+      core used by the desktop application returns density, phase behavior,
+      bubble point, and lower heating value.
+    </p>
+  </div>
+  <div class="hero-meter" aria-label="Calculation workflow">
+    <div>
+      <span>01</span>
+      <strong>Composition</strong>
+    </div>
+    <div>
+      <span>02</span>
+      <strong>Conditions</strong>
+    </div>
+    <div>
+      <span>03</span>
+      <strong>Properties</strong>
+    </div>
+  </div>
+</section>
+
+{% if errors %}
+<section class="alert alert-error" role="alert">
+  <div class="alert-symbol">!</div>
+  <div>
+    <strong>Calculation input needs attention</strong>
+    <ul>
+      {% for error in errors %}
+      <li>{{ error }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>
+{% endif %}
+
+<div class="workspace-grid">
+  <section class="panel input-panel">
+    <div class="panel-heading">
+      <div>
+        <p class="section-number">01 / Input</p>
+        <h2>Define the mixture</h2>
+      </div>
+      <div class="total-indicator" data-total-indicator>
+        <span>Basis total</span>
+        <strong data-total-value>100.00%</strong>
+      </div>
+    </div>
+
+    <form method="post" action="{{ url_for('calculate_page') }}">
+      <fieldset class="basis-fieldset">
+        <legend>Composition basis</legend>
+        <label class="segment">
+          <input
+            type="radio"
+            name="basis"
+            value="Mol %"
+            {% if form_state.basis == "Mol %" %}checked{% endif %}
+          >
+          <span>Mole %</span>
+        </label>
+        <label class="segment">
+          <input
+            type="radio"
+            name="basis"
+            value="Wt %"
+            {% if form_state.basis == "Wt %" %}checked{% endif %}
+          >
+          <span>Weight %</span>
+        </label>
+      </fieldset>
+
+      <div class="composition-labels" aria-hidden="true">
+        <span>Component</span>
+        <span>Percentage</span>
+        <span></span>
+      </div>
+
+      <div class="composition-list" data-composition-list>
+        {% for row in form_state.rows %}
+        <div class="composition-row" data-composition-row>
+          <label>
+            <span class="sr-only">Component {{ loop.index }}</span>
+            <select name="component_name">
+              <option value="">Select component</option>
+              {% for component in component_options %}
+              <option
+                value="{{ component.value }}"
+                {% if row.name == component.value %}selected{% endif %}
+              >
+                {{ component.label }}
+              </option>
+              {% endfor %}
+            </select>
+          </label>
+          <label class="percentage-field">
+            <span class="sr-only">Percentage {{ loop.index }}</span>
+            <input
+              type="number"
+              name="component_percentage"
+              value="{{ row.percentage }}"
+              min="0"
+              max="100"
+              step="any"
+              inputmode="decimal"
+              placeholder="0.00"
+              data-percentage-input
+            >
+            <span>%</span>
+          </label>
+          <button
+            class="icon-button"
+            type="button"
+            data-remove-row
+            aria-label="Remove component row"
+          >×</button>
+        </div>
+        {% endfor %}
+      </div>
+
+      <button class="text-button" type="button" data-add-row>
+        <span aria-hidden="true">+</span>
+        Add component
+      </button>
+
+      <div class="section-rule"></div>
+
+      <div class="panel-heading compact">
+        <div>
+          <p class="section-number">02 / Conditions</p>
+          <h2>Set the operating point</h2>
+        </div>
+      </div>
+
+      <div class="condition-grid">
+        <label class="field">
+          <span>Temperature</span>
+          <div class="unit-input">
+            <input
+              type="number"
+              name="temperature_c"
+              value="{{ form_state.temperature_c }}"
+              step="any"
+              required
+            >
+            <strong>°C</strong>
+          </div>
+        </label>
+        <label class="field">
+          <span>Pressure</span>
+          <div class="unit-input">
+            <input
+              type="number"
+              name="pressure_atm"
+              value="{{ form_state.pressure_atm }}"
+              min="0.000001"
+              step="any"
+              required
+            >
+            <strong>atm</strong>
+          </div>
+        </label>
+        <label class="field">
+          <span>Model</span>
+          <div class="unit-input read-only">
+            <input name="model" value="PRMIX" readonly>
+            <strong>EOS</strong>
+          </div>
+        </label>
+      </div>
+
+      <label class="check-row">
+        <input
+          type="checkbox"
+          name="include_report_projection"
+          {% if form_state.include_report_projection %}checked{% endif %}
+        >
+        <span>
+          <strong>Prepare report data</strong>
+          <small>Include report rows for the upcoming download workflow.</small>
+        </span>
+      </label>
+
+      <button class="primary-button" type="submit">
+        <span>Run calculation</span>
+        <span aria-hidden="true">→</span>
+      </button>
+    </form>
+  </section>
+
+  <section class="panel results-panel" aria-live="polite">
+    {% if result %}
+      {% set calculation = result.calculation %}
+      <div class="results-heading">
+        <div>
+          <p class="section-number">03 / Results</p>
+          <h2>Calculated properties</h2>
+        </div>
+        <span class="model-badge">{{ calculation.model_display }}</span>
+      </div>
+
+      {% if result.warnings %}
+      <div class="alert alert-warning">
+        <div class="alert-symbol">!</div>
+        <div>
+          <strong>Engineering note</strong>
+          <ul>
+            {% for warning in result.warnings %}
+            <li>{{ warning }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="metric-grid">
+        <article class="metric-card feature">
+          <span>Selected density</span>
+          {% if calculation.selected_density.scalar_kg_m3 is not none %}
+          <strong>
+            {{ "%.4f"|format(calculation.selected_density.scalar_kg_m3) }}
+          </strong>
+          <small>kg/m³</small>
+          {% else %}
+          <strong>—</strong>
+          <small>{{ calculation.selected_density.error or "Unavailable" }}</small>
+          {% endif %}
+        </article>
+        <article class="metric-card">
+          <span>Phase</span>
+          <strong>{{ calculation.selected_density.phase or "—" }}</strong>
+          <small>at selected conditions</small>
+        </article>
+        <article class="metric-card">
+          <span>Molecular weight</span>
+          <strong>{{ "%.3f"|format(calculation.average_molecular_weight) }}</strong>
+          <small>g/mol</small>
+        </article>
+        <article class="metric-card">
+          <span>Mixture LHV</span>
+          <strong>{{ "%.3f"|format(calculation.mixture_lhv_mj_nm3) }}</strong>
+          <small>MJ/Nm³</small>
+        </article>
+      </div>
+
+      <div class="result-section">
+        <div class="subheading">
+          <h3>Reference conditions</h3>
+          <span>Density comparison</span>
+        </div>
+        <div class="density-table">
+          <div class="density-row header">
+            <span>Condition</span>
+            <span>Phase</span>
+            <span>Density</span>
+          </div>
+          <div class="density-row">
+            <span>Selected</span>
+            <span>{{ calculation.selected_density.phase or "—" }}</span>
+            <strong>
+              {% if calculation.selected_density.scalar_kg_m3 is not none %}
+              {{ "%.4f"|format(calculation.selected_density.scalar_kg_m3) }}
+              {% else %}—{% endif %}
+            </strong>
+          </div>
+          <div class="density-row">
+            <span>Normal · 0 °C</span>
+            <span>{{ calculation.normal_density.phase or "—" }}</span>
+            <strong>
+              {% if calculation.normal_density.scalar_kg_m3 is not none %}
+              {{ "%.4f"|format(calculation.normal_density.scalar_kg_m3) }}
+              {% else %}—{% endif %}
+            </strong>
+          </div>
+          <div class="density-row">
+            <span>Standard · 60 °F</span>
+            <span>{{ calculation.standard_density.phase or "—" }}</span>
+            <strong>
+              {% if calculation.standard_density.scalar_kg_m3 is not none %}
+              {{ "%.4f"|format(calculation.standard_density.scalar_kg_m3) }}
+              {% else %}—{% endif %}
+            </strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="result-split">
+        <div class="result-section">
+          <div class="subheading">
+            <h3>Bubble point</h3>
+            <span>@ {{ calculation.pressure_atm }} atm</span>
+          </div>
+          {% if calculation.bubble_point_c is not none %}
+          <p class="large-reading">
+            {{ "%.2f"|format(calculation.bubble_point_c) }}
+            <small>°C</small>
+          </p>
+          {% else %}
+          <p class="result-note">
+            {{ calculation.bubble_point_error or "Not available." }}
+          </p>
+          {% endif %}
+        </div>
+        <div class="result-section">
+          <div class="subheading">
+            <h3>Composition</h3>
+            <span>{{ calculation.basis }}</span>
+          </div>
+          <ul class="composition-summary">
+            {% for component in calculation.component_names %}
+            <li>
+              <span>{{ component.title() }}</span>
+              <strong>
+                {% if calculation.basis == "Mol %" %}
+                {{ "%.3f"|format(calculation.mole_percents[loop.index0]) }}
+                {% else %}
+                {{ "%.3f"|format(calculation.weight_percents[loop.index0]) }}
+                {% endif %}%
+              </strong>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+
+      {% if result.report_projection %}
+      <div class="report-ready">
+        <span aria-hidden="true">✓</span>
+        <div>
+          <strong>Report data prepared</strong>
+          <small>
+            {{ result.report_projection.result_rows|length }} result rows are
+            ready for the Phase 5 download endpoint.
+          </small>
+        </div>
+      </div>
+      {% endif %}
+    {% else %}
+      <div class="results-empty">
+        <div class="orbital-mark" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+        <p class="section-number">03 / Results</p>
+        <h2>Your calculation will resolve here.</h2>
+        <p>
+          Submit a composition and operating point to calculate selected,
+          normal, and standard density alongside phase, bubble point, and LHV.
+        </p>
+        <dl class="capability-list">
+          <div>
+            <dt>Routes</dt>
+            <dd>PRMIX / IAPWS-95</dd>
+          </div>
+          <div>
+            <dt>Reference states</dt>
+            <dd>Normal / Standard</dd>
+          </div>
+          <div>
+            <dt>Input basis</dt>
+            <dd>Mole % / Weight %</dd>
+          </div>
+        </dl>
+      </div>
+    {% endif %}
+  </section>
+</div>
+
+<template id="composition-row-template">
+  <div class="composition-row" data-composition-row>
+    <label>
+      <span class="sr-only">Component</span>
+      <select name="component_name">
+        <option value="">Select component</option>
+        {% for component in component_options %}
+        <option value="{{ component.value }}">{{ component.label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="percentage-field">
+      <span class="sr-only">Percentage</span>
+      <input
+        type="number"
+        name="component_percentage"
+        min="0"
+        max="100"
+        step="any"
+        inputmode="decimal"
+        placeholder="0.00"
+        data-percentage-input
+      >
+      <span>%</span>
+    </label>
+    <button
+      class="icon-button"
+      type="button"
+      data-remove-row
+      aria-label="Remove component row"
+    >×</button>
+  </div>
+</template>
+{% endblock %}

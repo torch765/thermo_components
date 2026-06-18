@@ -14,7 +14,7 @@ The objective is not "DDD for its own sake." The objective is to isolate the eng
 
 ## Current State
 
-Desktop Phases 1 through 6 have extracted framework-free rules, application workflows, thermodynamics integration, LHV persistence, resource location, Excel report export, Qt worker/presenter/controller helpers, desktop dependency composition, and `MainWindow` hosting. Web Phases 1 through 3 have added an adapter-neutral calculation session, FastAPI application skeleton, and typed calculation API. [density.py](../density.py) remains a compatibility launcher and legacy import surface.
+Desktop Phases 1 through 6 have extracted framework-free rules, application workflows, thermodynamics integration, LHV persistence, resource location, Excel report export, Qt worker/presenter/controller helpers, desktop dependency composition, and `MainWindow` hosting. Web Phases 1 through 4 have added an adapter-neutral calculation session, FastAPI application, typed calculation API, and server-rendered calculator UI. [density.py](../density.py) remains a compatibility launcher and legacy import surface.
 
 The remaining desktop-specific responsibilities live in the Qt adapter package:
 
@@ -163,9 +163,13 @@ src/thermo_components/
       resource_locator.py
     web/
       app.py
+      calculation.py
+      pages.py
       routes.py
       schemas.py
       presenters.py
+      templates/
+      static/
   bootstrap/
     desktop.py
     web.py
@@ -238,6 +242,7 @@ The Qt layer should not calculate business results itself.
 - translate active-basis composition into application requests
 - call application services through request-scoped web dependencies
 - map application results and validation errors into HTTP responses
+- render the browser calculator through Jinja2 templates and project CSS
 
 The web adapter must not import PyQt, `density.py`, or generated Qt modules.
 
@@ -311,6 +316,7 @@ The current module should be decomposed as follows:
 | Resource lookup | Extracted; compatibility wrapper remains | `application/ports/resources.py`, `adapters/packaging/resource_locator.py` |
 | Desktop dependency composition | Extracted; compatibility launcher remains | `bootstrap/desktop.py` |
 | Web calculation API and presentation | Extracted | `adapters/web/routes.py`, `adapters/web/schemas.py`, `adapters/web/presenters.py` |
+| Server-rendered calculator UI | Extracted | `adapters/web/pages.py`, `adapters/web/templates/`, `adapters/web/static/` |
 | Web dependency composition | Extracted | `bootstrap/web.py` |
 
 ## Dependency Rules

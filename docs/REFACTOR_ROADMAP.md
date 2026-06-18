@@ -16,7 +16,7 @@ This roadmap is designed for incremental execution. The application must remain 
 
 ## Phased Plan
 
-Current status: Phases 0 through 6 are complete. Web Phases 0 through 3 are complete, with web planning captured in `docs/WEB_APP_DESIGN.md` and `docs/adr/0001-web-stack.md`.
+Current status: Phases 0 through 6 and Web Phases 0 through 3 are complete. Web Phase 4 implementation is complete and awaiting a browser smoke test.
 
 ### Phase 0: Stabilize and Characterize
 
@@ -273,10 +273,20 @@ Exit criteria:
 
 ### Web Phase 4: Server-Rendered UI
 
+Status: Implementation complete as of 2026-06-18; browser smoke test pending.
+
 Deliverables:
 
 - Add Jinja2 templates and project CSS.
 - Add calculator form, result view, and validation messages.
+
+Completed:
+
+- Added server-rendered calculator routes at `/` and `/calculator`.
+- Added dynamic composition rows, basis selection, condition inputs, and inline validation.
+- Added responsive result, warning, reference-density, and report-ready views.
+- Kept the HTML form and JSON API on the same shared web calculation handler.
+- Added focused page, form, static-asset, and real-calculation tests.
 
 Exit criteria:
 

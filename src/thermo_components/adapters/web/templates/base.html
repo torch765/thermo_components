@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta
+    name="description"
+    content="Thermodynamic property calculations for gas and liquid mixtures."
+  >
+  <title>{% block title %}Thermo Components{% endblock %}</title>
+  <link
+    rel="stylesheet"
+    href="{{ url_for('static', path='/calculator.css') }}"
+  >
+  <script
+    src="{{ url_for('static', path='/calculator.js') }}"
+    defer
+  ></script>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="site-header">
+      <a class="brand" href="{{ url_for('home') }}">
+        <span class="brand-mark" aria-hidden="true">TC</span>
+        <span>
+          <strong>Thermo Components</strong>
+          <small>Process property workspace</small>
+        </span>
+      </a>
+      <nav class="site-nav" aria-label="Primary navigation">
+        <a class="active" href="{{ url_for('calculator') }}">Calculator</a>
+        <a href="/docs">API</a>
+        <span class="service-state">
+          <span aria-hidden="true"></span>
+          Service online
+        </span>
+      </nav>
+    </header>
+
+    <main>
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+      <p>Thermo Components 1.0</p>
+      <p>PRMIX mixtures · IAPWS-95 pure-water routing</p>
+    </footer>
+  </div>
+</body>
+</html>

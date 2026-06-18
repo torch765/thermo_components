@@ -25,7 +25,7 @@ python density.py
 python -m uvicorn thermo_components.adapters.web.app:app --reload
 ```
 
-Use `http://127.0.0.1:8000/docs` to exercise the calculation API.
+Use `http://127.0.0.1:8000/` for the calculator and `/docs` for the JSON API.
 
 5. Run the test suite:
 
@@ -69,6 +69,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/REFACTOR_ROADMAP.md](
 - Adapter behavior should be covered with focused integration tests where needed.
 - Qt tests should stay narrow and verify controller/presenter wiring rather than widget cosmetics.
 - Web tests should verify routes and adapter boundaries without calling PyQt code.
+- Server-rendered page changes should test successful rendering, validation, and static assets.
 - High-risk areas include basis conversion, density reference handling, warning generation, flow conversion, and report row assembly.
 
 ## Documentation Expectations

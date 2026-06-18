@@ -4,7 +4,7 @@ Thermo Components calculates thermodynamic properties of gas and liquid mixtures
 
 ## Status
 
-The desktop tool remains fully operational. The web adapter currently provides health and JSON calculation endpoints; the server-rendered browser UI is the next phase. Pure rules live in `src/thermo_components/domain`, workflow orchestration and ports live in `src/thermo_components/application`, and framework integrations live under `src/thermo_components/adapters`.
+The desktop tool remains fully operational. The web adapter provides a server-rendered calculator, health endpoint, and JSON calculation API. Pure rules live in `src/thermo_components/domain`, workflow orchestration and ports live in `src/thermo_components/application`, and framework integrations live under `src/thermo_components/adapters`.
 
 ## Features
 
@@ -42,6 +42,7 @@ python -m uvicorn thermo_components.adapters.web.app:app --reload
 
 Then open:
 
+- `http://127.0.0.1:8000/` for the browser calculator
 - `http://127.0.0.1:8000/health` for the health check
 - `http://127.0.0.1:8000/docs` to try `POST /api/calculations`
 
@@ -96,7 +97,7 @@ The target design is a practical hexagonal architecture:
 - Adapters will isolate PyQt, `thermo`, SQLite, Excel, and packaging concerns.
 - The current UI should remain functional throughout the migration; this is an incremental refactor, not a rewrite branch.
 
-Desktop Phases 1 through 6 and Web Phases 0 through 3 are complete. The web API validates active-basis composition, derives the inactive basis through the application layer, and uses a request-scoped thermo gateway to avoid shared calculation state.
+Desktop Phases 1 through 6 and Web Phases 0 through 3 are complete. Web Phase 4 is implemented pending a browser smoke test. The HTML form and JSON API share one calculation handler and use request-scoped thermo gateways to avoid shared calculation state.
 
 ## Development Notes
 

@@ -1,6 +1,6 @@
 # Web App Design Basis
 
-Status: Accepted for MVP planning. Web Phases 0 through 3 are complete.
+Status: Accepted for MVP planning. Web Phase 4 is implemented and awaiting a browser smoke test.
 
 ## Purpose
 
@@ -288,9 +288,13 @@ Status: Complete as of 2026-06-18.
 
 ### Web Phase 4: Server-Rendered UI
 
+Status: Implementation complete as of 2026-06-18; browser smoke test pending.
+
 - Add calculator template and styling.
 - Render results and warnings.
 - Keep design functional before polishing visuals.
+- Reuse the calculation API handler rather than duplicating workflow mapping.
+- Serve the calculator at `/` and `/calculator`.
 
 ### Web Phase 5: Report Download
 
