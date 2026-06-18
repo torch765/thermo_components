@@ -1,6 +1,6 @@
 # Web App Design Basis
 
-Status: Accepted for MVP planning. Web Phases 0 through 2 are complete.
+Status: Accepted for MVP planning. Web Phases 0 through 3 are complete.
 
 ## Purpose
 
@@ -150,6 +150,7 @@ Recommended route set for the first implementation:
 
 ```text
 GET  /health
+POST /api/calculations
 GET  /
 GET  /calculator
 POST /calculator
@@ -158,11 +159,45 @@ POST /calculator/report
 
 `GET /health` returns a simple health response.
 
+`POST /api/calculations` accepts JSON input, runs the shared application
+workflow, and returns typed calculation results. It is the first implemented
+calculation route and provides the backend contract for the HTML form.
+
 `GET /calculator` renders the form.
 
 `POST /calculator` validates form input, runs the calculation, and renders results.
 
 `POST /calculator/report` regenerates the calculation from submitted form data and streams an Excel file.
+
+## Calculation API Contract
+
+`POST /api/calculations` accepts one percentage value per component on the
+selected basis:
+
+```json
+{
+  "components": [
+    {"name": "methane", "percentage": 100.0}
+  ],
+  "basis": "Mol %",
+  "temperature_c": 25.0,
+  "pressure_atm": 1.0,
+  "model": "PRMIX",
+  "include_report_projection": false
+}
+```
+
+The response contains:
+
+- the full property calculation
+- selected, normal, and standard density details
+- flow-density state for later conversion workflows
+- warnings
+- an optional report projection
+
+The web adapter derives the inactive composition basis through
+`DeriveCompositionUseCase`. It creates a fresh thermo gateway for every
+calculation request because the gateway holds mutable composition state.
 
 ## Report Download Strategy
 
@@ -243,9 +278,13 @@ Status: Complete as of 2026-06-17.
 
 ### Web Phase 3: Calculation API/Form Handler
 
+Status: Complete as of 2026-06-18.
+
 - Add web schemas and validation.
 - Convert form/API input into application requests.
 - Return calculation results through a web presenter.
+- Add request-scoped thermo composition through `bootstrap/web.py`.
+- Implement `POST /api/calculations`.
 
 ### Web Phase 4: Server-Rendered UI
 

@@ -1,10 +1,10 @@
 # Thermo Components
 
-Thermo Components is a PyQt6 desktop application for calculating thermodynamic properties of gas and liquid mixtures. It currently provides a GUI for component selection, composition entry, density and phase calculations, bubble-point estimation, lower heating value (LHV) lookup, flow conversion, and Excel report export.
+Thermo Components calculates thermodynamic properties of gas and liquid mixtures. It provides a PyQt6 desktop application and an in-progress FastAPI web application that reuse the same domain and application core.
 
 ## Status
 
-The application works today as a single-user desktop tool. Pure rules live in `src/thermo_components/domain`, workflow orchestration and ports live in `src/thermo_components/application`, and external thermodynamics, SQLite, Excel, packaging, and Qt UI concerns live under `src/thermo_components/adapters`. Desktop dependency composition lives in `src/thermo_components/bootstrap`; [density.py](density.py) is now a compatibility launcher that imports the main PyQt window from `adapters/ui/qt_main_window.py`.
+The desktop tool remains fully operational. The web adapter currently provides health and JSON calculation endpoints; the server-rendered browser UI is the next phase. Pure rules live in `src/thermo_components/domain`, workflow orchestration and ports live in `src/thermo_components/application`, and framework integrations live under `src/thermo_components/adapters`.
 
 ## Features
 
@@ -15,6 +15,7 @@ The application works today as a single-user desktop tool. Pure rules live in `s
 - Flow conversion between mass and reference-volume units
 - Excel report export with warnings and calculated results
 - Special handling for pure-water calculations through `IAPWS-95`
+- JSON calculation API with typed validation and no PyQt dependency
 
 ## Quick Start
 
@@ -33,13 +34,16 @@ python -m pip install -r requirements.txt
 python density.py
 ```
 
-4. Run the current web skeleton:
+4. Run the web application:
 
 ```powershell
 python -m uvicorn thermo_components.adapters.web.app:app --reload
 ```
 
-Then open `http://127.0.0.1:8000/health`.
+Then open:
+
+- `http://127.0.0.1:8000/health` for the health check
+- `http://127.0.0.1:8000/docs` to try `POST /api/calculations`
 
 ## Tests
 
@@ -78,7 +82,7 @@ thermo_components/
       domain/          # Extracted framework-free business rules
       application/     # Typed DTOs, services, and workflow use cases
       adapters/        # Thermo, SQLite, Excel, packaging, Qt, and web integrations
-      bootstrap/       # Desktop dependency composition
+      bootstrap/       # Desktop and web dependency composition
   tests/               # Characterization tests
   docs/               # Architecture and roadmap documents
 ```
@@ -92,7 +96,7 @@ The target design is a practical hexagonal architecture:
 - Adapters will isolate PyQt, `thermo`, SQLite, Excel, and packaging concerns.
 - The current UI should remain functional throughout the migration; this is an incremental refactor, not a rewrite branch.
 
-Phases 1 through 6 are complete. The domain package owns pure rules, application use cases coordinate workflows through formal ports, and thermodynamics, SQLite LHV persistence, Excel reporting, resource lookup, desktop dependency composition, Qt controllers, and `MainWindow` are isolated outside the launcher. Web-readiness work has started with a UI-independent calculation session service and a FastAPI skeleton.
+Desktop Phases 1 through 6 and Web Phases 0 through 3 are complete. The web API validates active-basis composition, derives the inactive basis through the application layer, and uses a request-scoped thermo gateway to avoid shared calculation state.
 
 ## Development Notes
 

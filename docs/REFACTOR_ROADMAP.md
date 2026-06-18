@@ -16,7 +16,7 @@ This roadmap is designed for incremental execution. The application must remain 
 
 ## Phased Plan
 
-Current status: Phases 0 through 6 are complete. Web Phases 0 through 2 are complete, with web planning captured in `docs/WEB_APP_DESIGN.md` and `docs/adr/0001-web-stack.md`.
+Current status: Phases 0 through 6 are complete. Web Phases 0 through 3 are complete, with web planning captured in `docs/WEB_APP_DESIGN.md` and `docs/adr/0001-web-stack.md`.
 
 ### Phase 0: Stabilize and Characterize
 
@@ -252,11 +252,20 @@ Exit criteria:
 
 ### Web Phase 3: Calculation Form/API
 
+Status: Complete as of 2026-06-18.
+
 Deliverables:
 
 - Add web schemas and request validation.
 - Translate form/API input into application requests.
 - Render or return calculated results and warnings.
+
+Completed:
+
+- Added `POST /api/calculations` with typed Pydantic request and response schemas.
+- Added active-basis composition input and inactive-basis derivation through the application layer.
+- Added request-scoped thermo calculation sessions to prevent cross-request state leakage.
+- Added validation, error-mapping, presenter, bootstrap, architecture, and real-calculation tests.
 
 Exit criteria:
 

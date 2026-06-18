@@ -14,7 +14,7 @@ The objective is not "DDD for its own sake." The objective is to isolate the eng
 
 ## Current State
 
-Phases 1 through 5 have extracted framework-free rules, application workflows, thermodynamics integration, LHV persistence, resource location, Excel report export, Qt worker/presenter/controller helpers, desktop dependency composition, and `MainWindow` hosting. [density.py](../density.py) is now a compatibility launcher and legacy import surface.
+Desktop Phases 1 through 6 have extracted framework-free rules, application workflows, thermodynamics integration, LHV persistence, resource location, Excel report export, Qt worker/presenter/controller helpers, desktop dependency composition, and `MainWindow` hosting. Web Phases 1 through 3 have added an adapter-neutral calculation session, FastAPI application skeleton, and typed calculation API. [density.py](../density.py) remains a compatibility launcher and legacy import surface.
 
 The remaining desktop-specific responsibilities live in the Qt adapter package:
 
@@ -51,7 +51,7 @@ Report export depends on the application-owned `ReportExporter` port. `OpenPyxlR
 The remaining consolidation risks are now narrower:
 
 - Qt adapter code still owns framework coordination and presentation decisions
-- future web-facing workflows may need additional UI-independent application facades
+- report download and flow conversion still need web-facing adapters
 - compatibility aliases remain intentionally for the next public release
 
 ## Architectural Style
@@ -163,8 +163,12 @@ src/thermo_components/
       resource_locator.py
     web/
       app.py
+      routes.py
+      schemas.py
+      presenters.py
   bootstrap/
     desktop.py
+    web.py
 ```
 
 ## Core Domain Types
@@ -227,6 +231,15 @@ Responsibilities:
 - manage threads and user feedback
 
 The Qt layer should not calculate business results itself.
+
+### Web Adapter
+
+- validate HTTP input through Pydantic schemas
+- translate active-basis composition into application requests
+- call application services through request-scoped web dependencies
+- map application results and validation errors into HTTP responses
+
+The web adapter must not import PyQt, `density.py`, or generated Qt modules.
 
 ### Thermo Adapter
 
@@ -297,6 +310,8 @@ The current module should be decomposed as follows:
 | `MainWindow` hosting and workflow coordination | Extracted; compatibility launcher remains | `adapters/ui/qt_main_window.py` and supporting UI adapters |
 | Resource lookup | Extracted; compatibility wrapper remains | `application/ports/resources.py`, `adapters/packaging/resource_locator.py` |
 | Desktop dependency composition | Extracted; compatibility launcher remains | `bootstrap/desktop.py` |
+| Web calculation API and presentation | Extracted | `adapters/web/routes.py`, `adapters/web/schemas.py`, `adapters/web/presenters.py` |
+| Web dependency composition | Extracted | `bootstrap/web.py` |
 
 ## Dependency Rules
 

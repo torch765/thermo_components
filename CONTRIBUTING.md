@@ -25,6 +25,8 @@ python density.py
 python -m uvicorn thermo_components.adapters.web.app:app --reload
 ```
 
+Use `http://127.0.0.1:8000/docs` to exercise the calculation API.
+
 5. Run the test suite:
 
 ```powershell
@@ -44,6 +46,7 @@ python -m pytest
 - Use branch-by-abstraction: introduce new modules behind stable interfaces, then move callers gradually.
 - When extracting logic from `density.py`, keep the root file as a launcher and compatibility import surface.
 - Avoid leaking `PyQt6`, `thermo`, `sqlite3`, or `openpyxl` objects across architectural boundaries.
+- Keep FastAPI and Pydantic request/response types inside the web adapter.
 - Do not mix UI state manipulation with calculation orchestration in the same new module.
 
 ## Proposed Target Layout

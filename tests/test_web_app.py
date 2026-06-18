@@ -29,3 +29,10 @@ def test_module_app_is_ready_for_uvicorn_import():
         response = client.get("/health")
 
     assert response.status_code == 200
+
+
+def test_openapi_document_includes_calculation_endpoint():
+    response = TestClient(create_app()).get("/openapi.json")
+
+    assert response.status_code == 200
+    assert "/api/calculations" in response.json()["paths"]

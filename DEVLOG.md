@@ -1,5 +1,10 @@
 ## DEVLOG
 
+### 2026-06-18
+- Merged Web Phase 2 into `main` after a successful local `/health` smoke test.
+- Completed Web Phase 3 with typed calculation schemas, `POST /api/calculations`, web presenters, request-scoped thermo composition, validation/error mapping, and a real methane endpoint test.
+- Made bootstrap desktop exports lazy so importing the FastAPI application does not load PyQt.
+
 ### 2026-06-17
 - Started Phase 5 on a dedicated branch with `MainWindow` characterization tests for dependency injection, flow rendering, report request helpers, and calculation result/error lifecycle hooks.
 - Completed Phase 5B by moving Flow-tab widget setup, signal wiring, and conversion rendering into `adapters/ui/flow_tab.py`.

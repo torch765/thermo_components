@@ -1,5 +1,7 @@
 import ast
 from pathlib import Path
+import subprocess
+import sys
 
 import pytest
 
@@ -131,3 +133,26 @@ def test_web_framework_dependencies_are_confined_to_the_web_adapter():
             violations[str(relative_path)] = sorted(web_imports)
 
     assert violations == {}
+
+
+def test_importing_web_app_does_not_load_pyqt():
+    script = """
+import sys
+import thermo_components.adapters.web.app
+
+pyqt_loaded = any(
+    name == "PyQt6" or name.startswith("PyQt6.")
+    for name in sys.modules
+)
+raise SystemExit(1 if pyqt_loaded else 0)
+"""
+
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        cwd=PROJECT_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
