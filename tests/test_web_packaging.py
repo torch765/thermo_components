@@ -27,5 +27,7 @@ def test_web_templates_and_static_assets_are_package_data():
     ]
     assert (WEB_ROOT / "templates" / "base.html").is_file()
     assert (WEB_ROOT / "templates" / "calculator.html").is_file()
+    assert (WEB_ROOT / "templates" / "flow.html").is_file()
     assert (WEB_ROOT / "static" / "calculator.css").is_file()
     assert (WEB_ROOT / "static" / "calculator.js").is_file()
+    assert (WEB_ROOT / "static" / "flow.js").is_file()

@@ -8,6 +8,7 @@ from thermo_components.domain.composition import (
     MOLECULAR_WEIGHTS,
     normalize_component_identity,
 )
+from thermo_components.domain.flow_units import FLOW_UNITS
 
 
 CompositionBasisValue = Literal["Mol %", "Wt %"]
@@ -108,6 +109,26 @@ class CompositionNormalizeRequestSchema(WebSchema):
 
 class CompositionNormalizeResponseSchema(WebSchema):
     percentages: list[float]
+
+
+class FlowConversionRequestSchema(WebSchema):
+    input_text: str
+    from_unit: str
+    to_unit: str
+    normal_density_kg_m3: float | None = Field(default=None, gt=0.0)
+    standard_density_kg_m3: float | None = Field(default=None, gt=0.0)
+
+    @field_validator("from_unit", "to_unit")
+    @classmethod
+    def validate_flow_unit(cls, value: str) -> str:
+        if value not in FLOW_UNITS:
+            raise ValueError(f"Unsupported flow unit: {value}")
+        return value
+
+
+class FlowConversionResponseSchema(WebSchema):
+    value: float | None
+    display_value: str
 
 
 class DensityResultSchema(WebSchema):

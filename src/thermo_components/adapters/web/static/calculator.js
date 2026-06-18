@@ -1,4 +1,31 @@
 (() => {
+  const densityState = document.querySelector("[data-flow-density-state]");
+  if (densityState) {
+    const numberOrNull = (value) => {
+      const parsed = Number.parseFloat(value);
+      return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+    };
+    const storedDensities = {
+      selected_density_kg_m3: numberOrNull(
+        densityState.dataset.selectedDensity,
+      ),
+      normal_density_kg_m3: numberOrNull(
+        densityState.dataset.normalDensity,
+      ),
+      standard_density_kg_m3: numberOrNull(
+        densityState.dataset.standardDensity,
+      ),
+    };
+    try {
+      window.sessionStorage.setItem(
+        "thermo-components.flow-densities",
+        JSON.stringify(storedDensities),
+      );
+    } catch {
+      // Conversion still works with manual density entry.
+    }
+  }
+
   const form = document.querySelector("[data-calculator-form]");
   const list = document.querySelector("[data-composition-list]");
   const template = document.querySelector("#composition-row-template");

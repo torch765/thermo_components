@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}Flow Conversion · Thermo Components{% endblock %}
+
+{% block scripts %}
+<script
+  src="{{ url_for('static', path='/flow.js') }}"
+  defer
+></script>
+{% endblock %}
+
+{% block content %}
+<section class="hero flow-hero">
+  <div class="hero-copy">
+    <p class="eyebrow">Flow conversion workspace</p>
+    <h1>Convert process flow,<br><em>on the correct basis.</em></h1>
+    <p class="hero-summary">
+      Convert mass, normal-volume, and standard-volume flow rates. Reference
+      density values are carried from your latest calculation or can be
+      entered manually.
+    </p>
+  </div>
+  <div class="hero-meter" aria-label="Flow conversion workflow">
+    <div>
+      <span>01</span>
+      <strong>Enter flow</strong>
+    </div>
+    <div>
+      <span>02</span>
+      <strong>Select units</strong>
+    </div>
+    <div>
+      <span>03</span>
+      <strong>Review basis</strong>
+    </div>
+  </div>
+</section>
+
+<div class="flow-workspace" data-flow-workspace>
+  <section class="panel flow-converter-panel">
+    <div class="panel-heading">
+      <div>
+        <p class="section-number">01 / Conversion</p>
+        <h2>Flow rate</h2>
+      </div>
+      <span class="live-badge">Live result</span>
+    </div>
+
+    <form class="flow-form" data-flow-form>
+      <label class="field flow-value-field">
+        <span>Input value</span>
+        <input
+          type="text"
+          value="1"
+          inputmode="decimal"
+          autocomplete="off"
+          data-flow-input
+        >
+      </label>
+
+      <div class="flow-unit-grid">
+        <label class="field">
+          <span>From</span>
+          <select data-flow-from>
+            {% for unit in flow_units %}
+            <option value="{{ unit }}" {% if unit == "kg/h" %}selected{% endif %}>
+              {{ unit }}
+            </option>
+            {% endfor %}
+          </select>
+        </label>
+        <label class="field">
+          <span>To</span>
+          <select data-flow-to>
+            {% for unit in flow_units %}
+            <option value="{{ unit }}" {% if unit == "t/d" %}selected{% endif %}>
+              {{ unit }}
+            </option>
+            {% endfor %}
+          </select>
+        </label>
+      </div>
+
+      <div class="flow-result" aria-live="polite">
+        <span>Converted flow</span>
+        <div>
+          <output data-flow-result>0.024</output>
+          <strong data-flow-result-unit>t/d</strong>
+        </div>
+        <p data-flow-error role="alert"></p>
+      </div>
+    </form>
+  </section>
+
+  <aside class="panel density-context-panel">
+    <div class="panel-heading compact">
+      <div>
+        <p class="section-number">02 / Reference state</p>
+        <h2>Density context</h2>
+      </div>
+    </div>
+
+    <p class="density-context-summary">
+      Densities are only required when converting between mass and reference
+      volume, or between normal and standard volume bases.
+    </p>
+
+    <div class="density-inputs">
+      <label class="field">
+        <span>Normal density · 0 °C</span>
+        <div class="unit-input">
+          <input
+            type="number"
+            min="0"
+            step="any"
+            placeholder="Not set"
+            data-normal-density
+          >
+          <strong>kg/m³</strong>
+        </div>
+      </label>
+      <label class="field">
+        <span>Standard density · 60 °F</span>
+        <div class="unit-input">
+          <input
+            type="number"
+            min="0"
+            step="any"
+            placeholder="Not set"
+            data-standard-density
+          >
+          <strong>kg/m³</strong>
+        </div>
+      </label>
+    </div>
+
+    <div class="density-state" data-density-state>
+      No calculator density is stored in this browser session.
+    </div>
+
+    <button class="secondary-button" type="button" data-clear-densities>
+      Clear density values
+    </button>
+
+    <div class="basis-guide">
+      <div>
+        <strong>Normal basis</strong>
+        <span>Nm³ at 0 °C and 1 atm</span>
+      </div>
+      <div>
+        <strong>Standard basis</strong>
+        <span>Sm³, bbl and SCF units at 60 °F and 1 atm</span>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<noscript>
+  <section class="alert alert-error flow-noscript">
+    JavaScript is required for live flow conversion.
+  </section>
+</noscript>
+{% endblock %}

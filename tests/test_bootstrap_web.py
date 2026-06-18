@@ -1,5 +1,6 @@
 from thermo_components.application.services import CalculationSessionService
 from thermo_components.application.use_cases import (
+    ConvertFlowUseCase,
     DeriveCompositionUseCase,
     NormalizeCompositionUseCase,
 )
@@ -19,6 +20,10 @@ def test_build_web_dependencies_uses_supplied_lhv_data():
     assert isinstance(
         dependencies.normalize_composition_use_case,
         NormalizeCompositionUseCase,
+    )
+    assert isinstance(
+        dependencies.convert_flow_use_case,
+        ConvertFlowUseCase,
     )
 
 

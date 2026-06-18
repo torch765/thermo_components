@@ -10,6 +10,7 @@ from thermo_components.adapters.thermo import ThermoGateway
 from thermo_components.application.services import CalculationSessionService
 from thermo_components.application.use_cases import (
     CalculatePropertiesUseCase,
+    ConvertFlowUseCase,
     DeriveCompositionUseCase,
     NormalizeCompositionUseCase,
     PrepareReportUseCase,
@@ -25,6 +26,9 @@ class WebDependencies:
     calculation_session_factory: Callable[[str], CalculationSessionService]
     normalize_composition_use_case: NormalizeCompositionUseCase = field(
         default_factory=NormalizeCompositionUseCase
+    )
+    convert_flow_use_case: ConvertFlowUseCase = field(
+        default_factory=ConvertFlowUseCase
     )
 
 
@@ -67,5 +71,6 @@ def build_web_dependencies(
         lhv_database=loaded_lhv_data,
         derive_composition_use_case=DeriveCompositionUseCase(),
         normalize_composition_use_case=NormalizeCompositionUseCase(),
+        convert_flow_use_case=ConvertFlowUseCase(),
         calculation_session_factory=build_calculation_session,
     )

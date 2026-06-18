@@ -37,6 +37,7 @@ def test_openapi_document_includes_calculation_endpoint():
     assert response.status_code == 200
     openapi = response.json()
     assert "/api/calculations" in openapi["paths"]
+    assert "/api/flow-conversions" in openapi["paths"]
     assert openapi["components"]["schemas"]["CalculationRequestSchema"][
         "examples"
     ] == [

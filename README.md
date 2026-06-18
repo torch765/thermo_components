@@ -18,6 +18,7 @@ The desktop tool remains fully operational. The web adapter provides a server-re
 - Special handling for pure-water calculations through `IAPWS-95`
 - JSON calculation API with typed validation and no PyQt dependency
 - Complete volumetric and mass-basis LHV unit table
+- Stateless web flow-conversion workspace with all desktop units
 
 ## Quick Start
 
@@ -45,6 +46,7 @@ python -m uvicorn thermo_components.adapters.web.app:app --reload
 Then open:
 
 - `http://127.0.0.1:8000/` for the browser calculator
+- `http://127.0.0.1:8000/flow` for flow conversion
 - `http://127.0.0.1:8000/health` for the health check
 - `http://127.0.0.1:8000/docs` to try `POST /api/calculations`
 
@@ -99,7 +101,7 @@ The target design is a practical hexagonal architecture:
 - Adapters will isolate PyQt, `thermo`, SQLite, Excel, and packaging concerns.
 - The current UI should remain functional throughout the migration; this is an incremental refactor, not a rewrite branch.
 
-Desktop Phases 1 through 6 and Web Phases 0 through 3 are complete. Web Phase 4 is implemented pending a browser smoke test. The HTML form and JSON API share one calculation handler and use request-scoped thermo gateways to avoid shared calculation state.
+Desktop Phases 1 through 6 and Web Phases 0 through 4D are complete. Web Phase 5 report download is next. The HTML form and JSON API share one calculation handler and use request-scoped thermo gateways to avoid shared calculation state.
 
 ## Development Notes
 

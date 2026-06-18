@@ -10,6 +10,7 @@ from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
 
 from thermo_components.domain.composition import MOLECULAR_WEIGHTS
+from thermo_components.domain.flow_units import FLOW_UNIT_ORDER
 
 from .calculation import (
     WebCalculationDependencies,
@@ -42,6 +43,21 @@ def calculator_page(request: Request) -> HTMLResponse:
     return _render_calculator(
         request,
         form_state=_default_form_state(),
+    )
+
+
+@page_router.get(
+    "/flow",
+    response_class=HTMLResponse,
+    name="flow",
+)
+def flow_page(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse(
+        request=request,
+        name="flow.html",
+        context={
+            "flow_units": FLOW_UNIT_ORDER,
+        },
     )
 
 

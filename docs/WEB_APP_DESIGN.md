@@ -1,6 +1,6 @@
 # Web App Design Basis
 
-Status: Accepted for MVP planning. Web Phase 4C is complete and browser-tested.
+Status: Accepted for MVP planning. Web Phase 4D is complete and browser-tested.
 
 ## Purpose
 
@@ -391,6 +391,8 @@ Status: Complete and browser-tested as of 2026-06-18.
 - Expose ordered numeric and formatted LHV rows in the calculation response.
 
 ### Web Phase 4D: Flow Conversion Workspace
+
+Status: Complete and browser-tested as of 2026-06-18.
 
 - Add `/flow` and `POST /api/flow-conversions`.
 - Reuse `ConvertFlowUseCase` and all existing flow units.

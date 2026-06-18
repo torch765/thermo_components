@@ -16,7 +16,7 @@ This roadmap is designed for incremental execution. The application must remain 
 
 ## Phased Plan
 
-Current status: Phases 0 through 6 and Web Phases 0 through 4C are complete. Web Phase 4D remains planned before report download.
+Current status: Phases 0 through 6 and Web Phases 0 through 4D are complete. Web Phase 5 report download is next.
 
 ### Phase 0: Stabilize and Characterize
 
@@ -361,6 +361,8 @@ Exit criteria:
 
 ### Web Phase 4D: Flow Conversion Workspace
 
+Status: Complete and browser-tested as of 2026-06-18.
+
 Deliverables:
 
 - Add a dedicated Flow page or primary workspace section.
@@ -377,6 +379,24 @@ Implementation notes:
 - Store the latest calculation densities in browser session state for navigation to the Flow page.
 - Provide visible normal/standard density context and optional manual overrides.
 - Add swap and copy controls only after the core conversion path is tested.
+
+Completed:
+
+- Added `GET /flow` with all 17 desktop flow units.
+- Added typed `POST /api/flow-conversions` backed by
+  `ConvertFlowUseCase`.
+- Added debounced live conversion and domain error presentation.
+- Added calculator-to-flow density handoff through browser
+  `sessionStorage`.
+- Added visible normal and standard density context with manual overrides.
+- Kept density-independent and same-reference conversions available without
+  prior calculation state.
+- Added focused endpoint, page, density-handoff, packaging, and bootstrap
+  tests.
+
+Next:
+
+- Start Web Phase 5 report download.
 
 Exit criteria:
 

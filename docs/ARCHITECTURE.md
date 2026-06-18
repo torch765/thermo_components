@@ -14,7 +14,7 @@ The objective is not "DDD for its own sake." The objective is to isolate the eng
 
 ## Current State
 
-Desktop Phases 1 through 6 have extracted framework-free rules, application workflows, thermodynamics integration, LHV persistence, resource location, Excel report export, Qt worker/presenter/controller helpers, desktop dependency composition, and `MainWindow` hosting. Web Phases 1 through 4 have added an adapter-neutral calculation session, FastAPI application, typed calculation API, and server-rendered calculator UI. [density.py](../density.py) remains a compatibility launcher and legacy import surface.
+Desktop Phases 1 through 6 have extracted framework-free rules, application workflows, thermodynamics integration, LHV persistence, resource location, Excel report export, Qt worker/presenter/controller helpers, desktop dependency composition, and `MainWindow` hosting. Web Phases 1 through 4D have added an adapter-neutral calculation session, FastAPI application, typed calculation and flow APIs, a server-rendered calculator UI, and a stateless flow-conversion workspace. [density.py](../density.py) remains a compatibility launcher and legacy import surface.
 
 The remaining desktop-specific responsibilities live in the Qt adapter package:
 
@@ -51,7 +51,7 @@ Report export depends on the application-owned `ReportExporter` port. `OpenPyxlR
 The remaining consolidation risks are now narrower:
 
 - Qt adapter code still owns framework coordination and presentation decisions
-- report download and flow conversion still need web-facing adapters
+- report download still needs a web-facing adapter
 - compatibility aliases remain intentionally for the next public release
 
 ## Architectural Style
@@ -242,6 +242,8 @@ The Qt layer should not calculate business results itself.
 - translate active-basis composition into application requests
 - derive and normalize web composition through application use cases
 - present expanded LHV units through shared domain display rules
+- expose flow conversion through `ConvertFlowUseCase`
+- carry calculation densities in browser session state while keeping the server stateless
 - call application services through request-scoped web dependencies
 - map application results and validation errors into HTTP responses
 - render the browser calculator through Jinja2 templates and project CSS

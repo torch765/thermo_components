@@ -230,7 +230,16 @@
     </form>
   </section>
 
-  <section class="panel results-panel" aria-live="polite">
+  <section
+    class="panel results-panel"
+    aria-live="polite"
+    {% if result %}
+    data-flow-density-state
+    data-selected-density="{{ result.flow_densities.selected_density_kg_m3 if result.flow_densities.selected_density_kg_m3 is not none else '' }}"
+    data-normal-density="{{ result.flow_densities.normal_density_kg_m3 if result.flow_densities.normal_density_kg_m3 is not none else '' }}"
+    data-standard-density="{{ result.flow_densities.standard_density_kg_m3 if result.flow_densities.standard_density_kg_m3 is not none else '' }}"
+    {% endif %}
+  >
     {% if result %}
       {% set calculation = result.calculation %}
       <div class="stale-notice" data-stale-notice>

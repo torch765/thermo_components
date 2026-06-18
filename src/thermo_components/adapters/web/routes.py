@@ -6,6 +6,8 @@ from fastapi import APIRouter, HTTPException, Request, status
 
 from thermo_components.application.dto import (
     DeriveCompositionRequest,
+    FlowConversionRequest,
+    FlowConversionResponse,
     NormalizeCompositionRequest,
     NormalizeCompositionResponse,
 )
@@ -21,6 +23,8 @@ from .schemas import (
     CompositionDeriveResponseSchema,
     CompositionNormalizeRequestSchema,
     CompositionNormalizeResponseSchema,
+    FlowConversionRequestSchema,
+    FlowConversionResponseSchema,
 )
 
 
@@ -34,8 +38,19 @@ class _NormalizeCompositionWorkflow(Protocol):
     ) -> NormalizeCompositionResponse: ...
 
 
+class _ConvertFlowWorkflow(Protocol):
+    def execute(
+        self,
+        request: FlowConversionRequest,
+    ) -> FlowConversionResponse: ...
+
+
 class _CompositionDependencies(WebCalculationDependencies, Protocol):
     normalize_composition_use_case: _NormalizeCompositionWorkflow
+
+
+class _FlowDependencies(WebCalculationDependencies, Protocol):
+    convert_flow_use_case: _ConvertFlowWorkflow
 
 
 @router.post(
@@ -117,4 +132,38 @@ def normalize_composition(
         ) from exc
     return CompositionNormalizeResponseSchema(
         percentages=list(response.percentages)
+    )
+
+
+@router.post(
+    "/flow-conversions",
+    response_model=FlowConversionResponseSchema,
+    tags=["flow"],
+)
+def convert_flow(
+    payload: FlowConversionRequestSchema,
+    request: Request,
+) -> FlowConversionResponseSchema:
+    dependencies = cast(
+        _FlowDependencies,
+        request.app.state.dependencies,
+    )
+    try:
+        response = dependencies.convert_flow_use_case.execute(
+            FlowConversionRequest(
+                input_text=payload.input_text,
+                from_unit=payload.from_unit,
+                to_unit=payload.to_unit,
+                normal_density_kg_m3=payload.normal_density_kg_m3,
+                standard_density_kg_m3=payload.standard_density_kg_m3,
+            )
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail=str(exc),
+        ) from exc
+    return FlowConversionResponseSchema(
+        value=response.value,
+        display_value=response.display_value,
     )
