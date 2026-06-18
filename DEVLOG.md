@@ -6,6 +6,7 @@
 - Made bootstrap desktop exports lazy so importing the FastAPI application does not load PyQt.
 - Merged Web Phase 3 into `main` after a successful Swagger calculation smoke test.
 - Implemented Web Phase 4 with Jinja2 calculator pages, responsive project CSS, dynamic composition rows, server-rendered results, validation feedback, and shared HTML/API calculation handling.
+- Compacted the Phase 4 desktop layout after browser testing showed excessive hero, panel, and control scale.
 
 ### 2026-06-17
 - Started Phase 5 on a dedicated branch with `MainWindow` characterization tests for dependency injection, flow rendering, report request helpers, and calculation result/error lifecycle hooks.

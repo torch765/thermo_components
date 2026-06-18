@@ -102,7 +102,6 @@ def _default_form_state() -> dict:
         "rows": [
             {"name": "methane", "percentage": "100"},
             {"name": "", "percentage": ""},
-            {"name": "", "percentage": ""},
         ],
         "basis": "Mol %",
         "temperature_c": "25",
