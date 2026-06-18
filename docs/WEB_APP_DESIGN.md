@@ -1,6 +1,6 @@
 # Web App Design Basis
 
-Status: Accepted for MVP planning. Web Phase 5 is complete and browser-tested.
+Status: MVP deployed and smoke-tested on DigitalOcean App Platform.
 
 ## Purpose
 
@@ -407,6 +407,8 @@ Status: Complete and browser-tested as of 2026-06-18.
 - Add tests around generated response.
 
 ### Web Phase 6: DigitalOcean Deployment
+
+Status: Complete as of 2026-06-18.
 
 - Add `.do/app.yaml` and pin the supported Python runtime.
 - Add App Platform notes or app spec.

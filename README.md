@@ -51,6 +51,10 @@ Then open:
 - `http://127.0.0.1:8000/health` for the health check
 - `http://127.0.0.1:8000/docs` to try `POST /api/calculations`
 
+Production calculator:
+
+- `https://thermo-components-app-pecob.ondigitalocean.app/calculator`
+
 ## Tests
 
 Install the development dependencies and run the characterization suite:
@@ -103,7 +107,7 @@ The target design is a practical hexagonal architecture:
 - Adapters will isolate PyQt, `thermo`, SQLite, Excel, and packaging concerns.
 - The current UI should remain functional throughout the migration; this is an incremental refactor, not a rewrite branch.
 
-Desktop Phases 1 through 6 and Web Phases 0 through 5 are complete. Web Phase 6 deployment is next. The HTML form and JSON API share one calculation handler and use request-scoped thermo gateways to avoid shared calculation state.
+Desktop Phases 1 through 6 and Web Phases 0 through 6 are complete. The web MVP is deployed on DigitalOcean App Platform. The HTML form and JSON API share one calculation handler and use request-scoped thermo gateways to avoid shared calculation state.
 
 ## Development Notes
 

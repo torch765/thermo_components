@@ -16,7 +16,7 @@ This roadmap is designed for incremental execution. The application must remain 
 
 ## Phased Plan
 
-Current status: Phases 0 through 6 and Web Phases 0 through 5 are complete. Web Phase 6 deployment is next.
+Current status: Phases 0 through 6 and Web Phases 0 through 6 are complete. The web MVP is deployed and smoke-tested.
 
 ### Phase 0: Stabilize and Characterize
 
@@ -433,7 +433,7 @@ Exit criteria:
 
 ### Web Phase 6: DigitalOcean Deployment
 
-Status: In progress as of 2026-06-18.
+Status: Complete as of 2026-06-18.
 
 Deliverables:
 
@@ -451,9 +451,14 @@ Completed:
 
 Next:
 
-- Push the completed local `main` history to GitHub.
-- Create the App Platform application from the GitHub repository.
-- Monitor the first build and runtime deployment.
+- Monitor production logs and resource use during normal operation.
+
+Production:
+
+- `https://thermo-components-app-pecob.ondigitalocean.app/calculator`
+- London region, one 512 MiB shared-vCPU container.
+- Live smoke tests passed for health, calculator, flow conversion, methane
+  calculation, and Excel download.
 
 Exit criteria:
 

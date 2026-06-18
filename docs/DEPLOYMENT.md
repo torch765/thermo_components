@@ -1,5 +1,11 @@
 # DigitalOcean App Platform Deployment
 
+Status: Deployed and smoke-tested on 2026-06-18.
+
+Production URL:
+
+- <https://thermo-components-app-pecob.ondigitalocean.app/calculator>
+
 ## Deployment Target
 
 - Platform: DigitalOcean App Platform
@@ -63,3 +69,11 @@ After the deployment becomes active:
 4. Download the Excel report and open the workbook.
 5. Review runtime logs for restarts, memory failures, or missing-resource
    errors.
+
+The initial production smoke test passed:
+
+- health endpoint returned `ok`
+- calculator and flow pages returned HTTP 200
+- methane calculation returned expected molecular weight and densities
+- `1 kg/h` to `t/d` returned `0.024`
+- Excel report download returned a valid `.xlsx` attachment

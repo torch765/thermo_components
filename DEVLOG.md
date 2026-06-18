@@ -18,6 +18,7 @@
 - Closed Web Phase 5 after successful browser download and workbook testing.
 - Expanded the molecular-weight catalog with sulfur species, oxygenates, heavier hydrocarbons, cycloalkanes, and distinct cis/trans 2-butene entries; removed duplicate butylene naming.
 - Started Web Phase 6 with a DigitalOcean App Platform spec, pinned Python runtime, health-check configuration, and deployment guide.
+- Deployed the web MVP to DigitalOcean App Platform in London and passed live health, calculator, flow, methane-calculation, and Excel-download smoke tests.
 
 ### 2026-06-17
 - Started Phase 5 on a dedicated branch with `MainWindow` characterization tests for dependency injection, flow rendering, report request helpers, and calculation result/error lifecycle hooks.
