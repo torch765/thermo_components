@@ -143,6 +143,18 @@ class FlowDensityStateSchema(WebSchema):
     standard_density_kg_m3: float | None
 
 
+class LhvValueSchema(WebSchema):
+    unit: str
+    value: float | None
+    display_value: str
+
+
+class LhvDisplaySchema(WebSchema):
+    available: bool
+    volumetric: list[LhvValueSchema]
+    mass_basis: list[LhvValueSchema]
+
+
 class ReportResultRowSchema(WebSchema):
     property_name: str
     value: Any
@@ -163,5 +175,6 @@ class ReportProjectionSchema(WebSchema):
 class CalculationResponseSchema(WebSchema):
     calculation: PropertyCalculationSchema
     flow_densities: FlowDensityStateSchema
+    lhv: LhvDisplaySchema
     warnings: list[str]
     report_projection: ReportProjectionSchema | None

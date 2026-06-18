@@ -115,6 +115,7 @@ def test_calculation_session_composes_calculation_and_report_projection():
         standard_density_kg_m3=0.68,
     )
     assert response.warning_messages == ("Check reference density",)
+    assert response.lhv_data_available is True
     assert response.report_projection is prepare_report_use_case.projection
     assert calculate_use_case.requests == [request.calculation_request]
     assert prepare_report_use_case.requests[0].calculation is (

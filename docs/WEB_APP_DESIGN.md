@@ -1,6 +1,6 @@
 # Web App Design Basis
 
-Status: Accepted for MVP planning. Web Phase 4B is complete and browser-tested.
+Status: Accepted for MVP planning. Web Phase 4C is implemented and awaiting a browser smoke test.
 
 ## Purpose
 
@@ -383,9 +383,12 @@ Status: Complete and browser-tested as of 2026-06-18.
 
 ### Web Phase 4C: Expanded LHV Results
 
+Status: Implementation complete as of 2026-06-18; browser smoke test pending.
+
 - Add the complete volumetric and mass-basis LHV table.
 - Reuse domain display-value rules.
 - Test web values against desktop/domain expectations.
+- Expose ordered numeric and formatted LHV rows in the calculation response.
 
 ### Web Phase 4D: Flow Conversion Workspace
 

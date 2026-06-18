@@ -5,15 +5,41 @@ from thermo_components.application.dto import (
     ReportProjection,
 )
 from thermo_components.application.services import CalculationSessionResponse
+from thermo_components.domain.lhv import (
+    build_lhv_display_values,
+    format_lhv_display_value,
+)
 
 from .schemas import (
     CalculationResponseSchema,
     DensityResultSchema,
     FlowDensityStateSchema,
+    LhvDisplaySchema,
+    LhvValueSchema,
     PropertyCalculationSchema,
     ReportProjectionSchema,
     ReportResultRowSchema,
     ReportWarningRowSchema,
+)
+
+VOLUMETRIC_LHV_UNITS = (
+    "MJ/Nm\u00b3",
+    "kcal/Nm\u00b3",
+    "MMkcal/Nm\u00b3",
+    "GJ/Nm\u00b3",
+    "MMBtu/Nm\u00b3",
+)
+MASS_BASIS_LHV_UNITS = (
+    "MJ/kg",
+    "MJ/t",
+    "GJ/kg",
+    "GJ/t",
+    "kcal/kg",
+    "kcal/t",
+    "MMkcal/kg",
+    "MMkcal/t",
+    "MMBtu/kg",
+    "MMBtu/t",
 )
 
 
@@ -54,10 +80,50 @@ def present_calculation_session(
                 response.flow_densities.standard_density_kg_m3
             ),
         ),
+        lhv=_present_lhv(response),
         warnings=list(response.warning_messages),
         report_projection=_present_report_projection(
             response.report_projection
         ),
+    )
+
+
+def _present_lhv(
+    response: CalculationSessionResponse,
+) -> LhvDisplaySchema:
+    calculation = response.calculation
+    values = build_lhv_display_values(
+        calculation.mixture_lhv_mj_nm3,
+        calculation.average_molecular_weight,
+    )
+    available = response.lhv_data_available
+    return LhvDisplaySchema(
+        available=available,
+        volumetric=[
+            _present_lhv_value(
+                unit,
+                values["volumetric"][unit] if available else None,
+            )
+            for unit in VOLUMETRIC_LHV_UNITS
+        ],
+        mass_basis=[
+            _present_lhv_value(
+                unit,
+                values["mass_basis"][unit] if available else None,
+            )
+            for unit in MASS_BASIS_LHV_UNITS
+        ],
+    )
+
+
+def _present_lhv_value(
+    unit: str,
+    value: float | None,
+) -> LhvValueSchema:
+    return LhvValueSchema(
+        unit=unit,
+        value=value,
+        display_value=format_lhv_display_value(value),
     )
 
 

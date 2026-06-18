@@ -78,6 +78,78 @@ def test_calculator_form_renders_real_methane_results():
     assert "Normal · 0 °C" in response.text
 
 
+def test_calculator_form_renders_complete_lhv_unit_set():
+    response = build_client().post(
+        "/calculator",
+        data=methane_form(),
+    )
+
+    assert response.status_code == 200
+    for unit in (
+        "MJ/Nm\u00b3",
+        "kcal/Nm\u00b3",
+        "MMkcal/Nm\u00b3",
+        "GJ/Nm\u00b3",
+        "MMBtu/Nm\u00b3",
+        "MJ/kg",
+        "MJ/t",
+        "GJ/kg",
+        "GJ/t",
+        "kcal/kg",
+        "kcal/t",
+        "MMkcal/kg",
+        "MMkcal/t",
+        "MMBtu/kg",
+        "MMBtu/t",
+    ):
+        assert unit in response.text
+    assert "35.80" in response.text
+    assert "50.03" in response.text
+    assert "8550.68" in response.text
+
+
+def test_calculator_form_marks_lhv_values_unavailable_without_database():
+    client = TestClient(
+        create_app(build_web_dependencies(lhv_data={}))
+    )
+
+    response = client.post(
+        "/calculator",
+        data=methane_form(),
+    )
+
+    assert response.status_code == 200
+    assert "LHV data unavailable" in response.text
+    assert response.text.count("N/A") >= 15
+
+
+def test_calculator_form_warns_when_component_lhv_data_is_missing():
+    payload = urlencode(
+        [
+            ("component_name", "methane"),
+            ("component_name", "nitrogen"),
+            ("component_mole_percentage", "50"),
+            ("component_mole_percentage", "50"),
+            ("component_weight_percentage", ""),
+            ("component_weight_percentage", ""),
+            ("basis", "Mol %"),
+            ("temperature_c", "25"),
+            ("pressure_atm", "1"),
+            ("model", "PRMIX"),
+        ]
+    )
+
+    response = build_client().post(
+        "/calculator",
+        content=payload,
+        headers={"content-type": "application/x-www-form-urlencoded"},
+    )
+
+    assert response.status_code == 200
+    assert "Partial LHV result" in response.text
+    assert "nitrogen" in response.text
+
+
 def test_calculator_form_accepts_multiple_component_rows():
     payload = urlencode(
         [

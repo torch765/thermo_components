@@ -241,6 +241,7 @@ The Qt layer should not calculate business results itself.
 - validate HTTP input through Pydantic schemas
 - translate active-basis composition into application requests
 - derive and normalize web composition through application use cases
+- present expanded LHV units through shared domain display rules
 - call application services through request-scoped web dependencies
 - map application results and validation errors into HTTP responses
 - render the browser calculator through Jinja2 templates and project CSS

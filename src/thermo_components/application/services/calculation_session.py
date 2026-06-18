@@ -50,6 +50,7 @@ class CalculationSessionResponse:
     calculation: PropertyCalculationResponse
     flow_densities: FlowDensityState
     warning_messages: tuple[str, ...]
+    lhv_data_available: bool = True
     report_projection: ReportProjection | None = None
 
 
@@ -94,5 +95,6 @@ class CalculationSessionService:
                 ),
             ),
             warning_messages=calculation.warnings,
+            lhv_data_available=request.lhv_data_available,
             report_projection=report_projection,
         )

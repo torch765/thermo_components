@@ -258,6 +258,30 @@
       </div>
       {% endif %}
 
+      {% if not result.lhv.available %}
+      <div class="alert alert-warning">
+        <div class="alert-symbol">!</div>
+        <div>
+          <strong>LHV data unavailable</strong>
+          <p>
+            The LHV database was not loaded. All LHV unit values are shown as
+            N/A.
+          </p>
+        </div>
+      </div>
+      {% elif calculation.missing_lhv %}
+      <div class="alert alert-warning">
+        <div class="alert-symbol">!</div>
+        <div>
+          <strong>Partial LHV result</strong>
+          <p>
+            No LHV data was found for:
+            {{ calculation.missing_lhv|join(", ") }}.
+          </p>
+        </div>
+      </div>
+      {% endif %}
+
       <div class="metric-grid">
         <article class="metric-card feature">
           <span>Selected density</span>
@@ -286,6 +310,43 @@
           <strong>{{ "%.3f"|format(calculation.mixture_lhv_mj_nm3) }}</strong>
           <small>MJ/Nm³</small>
         </article>
+      </div>
+
+      <div class="result-section lhv-section">
+        <div class="subheading">
+          <h3>Lower heating value</h3>
+          <span>Volumetric and mass basis</span>
+        </div>
+        <div class="lhv-grid">
+          <article class="lhv-group">
+            <div class="lhv-group-heading">
+              <strong>Volumetric basis</strong>
+              <span>Normal cubic metre</span>
+            </div>
+            <div class="lhv-table">
+              {% for row in result.lhv.volumetric %}
+              <div class="lhv-row">
+                <span>{{ row.unit }}</span>
+                <strong>{{ row.display_value }}</strong>
+              </div>
+              {% endfor %}
+            </div>
+          </article>
+          <article class="lhv-group">
+            <div class="lhv-group-heading">
+              <strong>Mass basis</strong>
+              <span>Derived from mixture MW</span>
+            </div>
+            <div class="lhv-table two-column">
+              {% for row in result.lhv.mass_basis %}
+              <div class="lhv-row">
+                <span>{{ row.unit }}</span>
+                <strong>{{ row.display_value }}</strong>
+              </div>
+              {% endfor %}
+            </div>
+          </article>
+        </div>
       </div>
 
       <div class="result-section">

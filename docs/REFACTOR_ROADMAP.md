@@ -16,7 +16,7 @@ This roadmap is designed for incremental execution. The application must remain 
 
 ## Phased Plan
 
-Current status: Phases 0 through 6 and Web Phases 0 through 4B are complete. Web Phases 4C and 4D remain planned before report download.
+Current status: Phases 0 through 6 and Web Phases 0 through 4B are complete. Web Phase 4C implementation is complete and awaiting a browser smoke test; Phase 4D remains planned.
 
 ### Phase 0: Stabilize and Characterize
 
@@ -329,6 +329,8 @@ Exit criteria:
 
 ### Web Phase 4C: Expanded LHV Results
 
+Status: Implementation complete as of 2026-06-18; browser smoke test pending.
+
 Deliverables:
 
 - Display all existing volumetric LHV units:
@@ -343,6 +345,14 @@ Deliverables:
   - `MMBtu/kg`, `MMBtu/t`
 - Reuse `build_lhv_display_values`; do not reproduce conversion constants in templates or JavaScript.
 - Render missing-LHV warnings prominently.
+
+Completed:
+
+- Added typed LHV web response rows with numeric and formatted values.
+- Added all 5 volumetric and 10 mass-basis units to the calculator results.
+- Reused `build_lhv_display_values` and `format_lhv_display_value`.
+- Added unavailable-database and partial-component-data warnings.
+- Added API, page, representative-value, unit-inventory, and warning tests.
 
 Exit criteria:
 

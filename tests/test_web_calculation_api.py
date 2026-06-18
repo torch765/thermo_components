@@ -52,7 +52,10 @@ class RecordingSessionFactory:
         return self.session
 
 
-def methane_session_response() -> CalculationSessionResponse:
+def methane_session_response(
+    *,
+    lhv_data_available=True,
+) -> CalculationSessionResponse:
     calculation = PropertyCalculationResponse(
         average_molecular_weight=16.04,
         component_names=("methane",),
@@ -92,6 +95,7 @@ def methane_session_response() -> CalculationSessionResponse:
             standard_density_kg_m3=0.679,
         ),
         warning_messages=(),
+        lhv_data_available=lhv_data_available,
         report_projection=ReportProjection(
             result_rows=(
                 ReportResultRow(
@@ -145,6 +149,17 @@ def test_calculation_endpoint_maps_web_input_to_application_request():
         "normal_density_kg_m3": 0.718,
         "standard_density_kg_m3": 0.679,
     }
+    assert len(response.json()["lhv"]["volumetric"]) == 5
+    assert len(response.json()["lhv"]["mass_basis"]) == 10
+    assert response.json()["lhv"]["volumetric"][0] == {
+        "unit": "MJ/Nm\u00b3",
+        "value": 35.8,
+        "display_value": "35.80",
+    }
+    assert response.json()["lhv"]["mass_basis"][0]["unit"] == "MJ/kg"
+    assert response.json()["lhv"]["mass_basis"][0]["value"] == (
+        pytest.approx(35.8 / (16.04 / 22.414))
+    )
     assert response.json()["report_projection"]["result_rows"][0] == {
         "property_name": "Average molecular weight",
         "value": 16.04,
@@ -271,6 +286,29 @@ def test_calculation_endpoint_maps_application_validation_error_to_422():
     assert response.json() == {
         "detail": "Calculation request was rejected.",
     }
+
+
+def test_calculation_endpoint_marks_lhv_values_unavailable_without_database():
+    dependencies = WebDependencies(
+        lhv_database={},
+        derive_composition_use_case=FakeDeriveCompositionUseCase(),
+        calculation_session_factory=RecordingSessionFactory(
+            FakeCalculationSession(
+                methane_session_response(lhv_data_available=False)
+            )
+        ),
+    )
+
+    response = TestClient(create_app(dependencies)).post(
+        "/api/calculations",
+        json=valid_methane_payload(),
+    )
+
+    assert response.status_code == 200
+    lhv = response.json()["lhv"]
+    assert lhv["available"] is False
+    assert all(row["value"] is None for row in lhv["volumetric"])
+    assert all(row["display_value"] == "N/A" for row in lhv["mass_basis"])
 
 
 def test_calculation_endpoint_runs_real_methane_calculation():

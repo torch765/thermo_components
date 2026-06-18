@@ -17,6 +17,7 @@ The desktop tool remains fully operational. The web adapter provides a server-re
 - Excel report export with warnings and calculated results
 - Special handling for pure-water calculations through `IAPWS-95`
 - JSON calculation API with typed validation and no PyQt dependency
+- Complete volumetric and mass-basis LHV unit table
 
 ## Quick Start
 
