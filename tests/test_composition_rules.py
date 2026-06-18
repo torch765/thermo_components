@@ -2,6 +2,7 @@ import pytest
 
 from thermo_components.adapters.ui.qt_main_window import MainWindow
 from thermo_components.domain.composition import (
+    MOLECULAR_WEIGHTS,
     derive_inactive_percentages,
     is_effectively_pure_water,
     normalize_component_identity,
@@ -20,6 +21,39 @@ from thermo_components.domain.thermo_routes import (
 def test_component_identity_normalizes_water_alias():
     assert normalize_component_identity(" H2O ") == "water"
     assert normalize_component_identity("Methane") == "methane"
+    assert normalize_component_identity("mtbe") == "MTBE"
+
+
+def test_molecular_weight_catalog_contains_requested_components():
+    expected_entries = {
+        "ammonia": 17.03,
+        "carbonyl sulfide": 60.08,
+        "sulfur dioxide": 64.06,
+        "carbon disulfide": 76.14,
+        "methyl mercaptan": 48.11,
+        "methanol": 32.04,
+        "MTBE": 88.15,
+        "dimethyl ether": 46.07,
+        "decane": 142.28,
+        "dodecane": 170.33,
+        "cyclohexane": 84.16,
+        "methylcyclohexane": 98.19,
+        "cis-2-butene": 56.11,
+        "trans-2-butene": 56.11,
+    }
+
+    for component_name, molecular_weight in expected_entries.items():
+        assert MOLECULAR_WEIGHTS[component_name] == molecular_weight
+
+    assert "n-butylene" not in MOLECULAR_WEIGHTS
+    assert "2-butene" not in MOLECULAR_WEIGHTS
+
+    component_order = list(MOLECULAR_WEIGHTS)
+    nonane_index = component_order.index("nonane")
+    assert component_order[nonane_index + 1 : nonane_index + 3] == [
+        "decane",
+        "dodecane",
+    ]
 
 
 def test_water_fraction_uses_the_active_input_basis():

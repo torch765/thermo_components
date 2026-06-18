@@ -15,6 +15,11 @@ MOLECULAR_WEIGHTS = {
     "carbon dioxide": 44.01,
     "carbon monoxide": 28.01,
     "hydrogen sulfide": 34.08,
+    "ammonia": 17.03,
+    "carbonyl sulfide": 60.08,
+    "sulfur dioxide": 64.06,
+    "carbon disulfide": 76.14,
+    "methyl mercaptan": 48.11,
     "methane": 16.04,
     "ethane": 30.07,
     "ethylene": 28.05,
@@ -23,14 +28,16 @@ MOLECULAR_WEIGHTS = {
     "isobutane": 58.12,
     "n-butane": 58.12,
     "isobutylene": 56.11,
-    "n-butylene": 56.11,
     "1-butene": 56.11,
-    "2-butene": 56.11,
+    "cis-2-butene": 56.11,
+    "trans-2-butene": 56.11,
     "butadiene": 54.09,
     "isopentane": 72.15,
     "n-pentane": 72.15,
     "hexane": 86.18,
+    "cyclohexane": 84.16,
     "heptane": 100.20,
+    "methylcyclohexane": 98.19,
     "benzene": 78.11,
     "toluene": 92.14,
     "o-xylene": 106.17,
@@ -40,6 +47,11 @@ MOLECULAR_WEIGHTS = {
     "cumene": 120.19,
     "octane": 114.23,
     "nonane": 128.26,
+    "decane": 142.28,
+    "dodecane": 170.33,
+    "methanol": 32.04,
+    "MTBE": 88.15,
+    "dimethyl ether": 46.07,
     "oxygen": 32.00,
     "nitrogen": 28.01,
     "argon": 39.95,
@@ -52,11 +64,21 @@ PURE_WATER_WARNING_FRACTION = 0.999
 
 def normalize_component_identity(name: str) -> str:
     """Normalize a component identifier for domain comparisons."""
-    cleaned = str(name).strip().lower()
-    compact = "".join(character for character in cleaned if character.isalnum())
+    cleaned = str(name).strip()
+    lowercase = cleaned.lower()
+    compact = "".join(
+        character for character in lowercase if character.isalnum()
+    )
     if compact == "h2o":
         return "water"
-    return cleaned
+    return next(
+        (
+            component_name
+            for component_name in MOLECULAR_WEIGHTS
+            if component_name.lower() == lowercase
+        ),
+        lowercase,
+    )
 
 
 def is_water_component(name: str) -> bool:
