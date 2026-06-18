@@ -36,6 +36,26 @@ class ComponentInputSchema(WebSchema):
 
 
 class CalculationRequestSchema(WebSchema):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "components": [
+                        {
+                            "name": "methane",
+                            "percentage": 100.0,
+                        }
+                    ],
+                    "basis": "Mol %",
+                    "temperature_c": 25.0,
+                    "pressure_atm": 1.0,
+                    "model": "PRMIX",
+                    "include_report_projection": False,
+                }
+            ]
+        }
+    )
+
     components: list[ComponentInputSchema] = Field(min_length=1)
     basis: CompositionBasisValue
     temperature_c: float = Field(gt=-273.15)

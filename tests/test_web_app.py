@@ -35,4 +35,22 @@ def test_openapi_document_includes_calculation_endpoint():
     response = TestClient(create_app()).get("/openapi.json")
 
     assert response.status_code == 200
-    assert "/api/calculations" in response.json()["paths"]
+    openapi = response.json()
+    assert "/api/calculations" in openapi["paths"]
+    assert openapi["components"]["schemas"]["CalculationRequestSchema"][
+        "examples"
+    ] == [
+        {
+            "components": [
+                {
+                    "name": "methane",
+                    "percentage": 100.0,
+                }
+            ],
+            "basis": "Mol %",
+            "temperature_c": 25.0,
+            "pressure_atm": 1.0,
+            "model": "PRMIX",
+            "include_report_projection": False,
+        }
+    ]
