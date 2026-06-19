@@ -464,6 +464,48 @@ Exit criteria:
 
 - The MVP is reachable online and passes a deployment smoke test.
 
+## Post-MVP Follow-Up Tasks
+
+### Complete LHV Coverage For Added Components
+
+Status: Complete as of 2026-06-19.
+
+- Audit `lhv_data.db` against the expanded molecular-weight catalog.
+- Add verified LHV data for applicable new components:
+  - ammonia
+  - carbonyl sulfide
+  - sulfur dioxide
+  - carbon disulfide
+  - methyl mercaptan
+  - methanol
+  - MTBE
+  - dimethyl ether
+  - decane
+  - dodecane
+  - cyclohexane
+  - methylcyclohexane
+  - cis-2-butene
+  - trans-2-butene
+- Explicitly define zero or unavailable LHV behavior for non-combustible
+  species instead of silently treating missing records as complete data.
+- Verify component naming and casing match between `MOLECULAR_WEIGHTS` and
+  the LHV repository.
+- Add domain, SQLite, API, page, and report regression tests for representative
+  new components and mixed compositions.
+
+Completed:
+
+- Added NIST-derived LHV values for all 14 added component names.
+- Stored sulfur dioxide explicitly as zero under the selected complete-
+  combustion convention.
+- Rebuilt `lhv_data.db` with exactly one entry for every selectable component.
+- Removed obsolete `n-butylene` and generic `2-butene` records.
+- Made LHV lookup case-insensitive and preserved canonical `MTBE` naming in
+  SQLite.
+- Alphabetized component presentation in both web and desktop adapters.
+- Added source/method documentation in `docs/LHV_DATA.md`.
+- Added domain, SQLite, real API, web page, and Excel report regression tests.
+
 ## Module-by-Module Move Plan
 
 Move code out of `density.py` in this order:

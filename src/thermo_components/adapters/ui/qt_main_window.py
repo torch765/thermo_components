@@ -305,7 +305,16 @@ class MainWindow(QMainWindow):
     def populate_comboboxes(self):
         """Populate the ComboBox widgets with options."""
         # Component Selection ComboBox
-        self.ui.comboBox_select_components.addItems(list(MOLECULAR_WEIGHTS.keys()))
+        component_names = sorted(
+            (
+                component_name
+                for component_name in MOLECULAR_WEIGHTS
+                if component_name.strip()
+            ),
+            key=str.casefold,
+        )
+        self.ui.comboBox_select_components.addItem("        ")
+        self.ui.comboBox_select_components.addItems(component_names)
 
         # Temperature ComboBox
         cryo_temps = [f"{t} °C" for t in range(-250, 1, 10)]  # -250..0 step 10

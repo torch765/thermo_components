@@ -29,7 +29,10 @@ COMPONENT_OPTIONS = tuple(
         "value": component,
         "label": component.title(),
     }
-    for component, molecular_weight in MOLECULAR_WEIGHTS.items()
+    for component, molecular_weight in sorted(
+        MOLECULAR_WEIGHTS.items(),
+        key=lambda item: item[0].casefold(),
+    )
     if component.strip() and molecular_weight > 0
 )
 

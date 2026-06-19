@@ -1,6 +1,7 @@
 from pathlib import Path
 import sys
 
+from lhv_data import LHV_DATA_RAW
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -18,10 +19,12 @@ def test_sqlite_lhv_repository_creates_and_loads_values(tmp_path):
     assert repository.upsert_all(
         {
             " Methane ": 35.8,
+            "mtbe": 139.9,
             "nitrogen": 0.0,
         }
     )
     assert repository.load_all() == {
+        "MTBE": 139.9,
         "methane": 35.8,
         "nitrogen": 0.0,
     }
@@ -78,6 +81,12 @@ def test_lhv_loader_delegates_to_repository(tmp_path):
     SqliteLhvRepository(database_path).upsert_all({"methane": 35.8})
 
     assert load_lhv_data(database_path) == {"methane": 35.8}
+
+
+def test_bundled_lhv_database_matches_the_seed_catalog():
+    assert SqliteLhvRepository(PROJECT_ROOT / "lhv_data.db").load_all() == (
+        LHV_DATA_RAW
+    )
 
 
 def test_resource_path_returns_absolute_string(monkeypatch, tmp_path):

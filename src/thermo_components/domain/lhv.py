@@ -21,11 +21,17 @@ def calculate_mixture_lhv(
     if total_fraction == 0:
         return 0.0, []
 
+    normalized_lhv_data = {
+        str(component_name).strip().casefold(): float(value)
+        for component_name, value in lhv_data.items()
+    }
     mixture_lhv = 0.0
     missing_components: list[str] = []
     for component_name, fraction in components.items():
         mole_fraction = fraction / total_fraction
-        component_lhv = lhv_data.get(component_name)
+        component_lhv = normalized_lhv_data.get(
+            str(component_name).strip().casefold()
+        )
         if component_lhv is not None:
             mixture_lhv += mole_fraction * component_lhv
         elif component_name.strip():

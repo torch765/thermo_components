@@ -4,6 +4,8 @@ from collections.abc import Mapping
 from pathlib import Path
 import sqlite3
 
+from thermo_components.domain.composition import normalize_component_identity
+
 
 class SqliteLhvRepository:
     """Store and retrieve component LHV values from SQLite."""
@@ -40,7 +42,7 @@ class SqliteLhvRepository:
     def upsert_all(self, values: Mapping[str, float]) -> bool:
         """Create the schema and upsert a normalized set of LHV values."""
         normalized_values = [
-            (str(name).strip().lower(), float(lhv))
+            (normalize_component_identity(name), float(lhv))
             for name, lhv in values.items()
             if str(name).strip()
         ]

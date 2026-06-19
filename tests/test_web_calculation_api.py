@@ -334,3 +334,25 @@ def test_calculation_endpoint_runs_real_methane_calculation():
     assert result["calculation"]["mixture_lhv_mj_nm3"] == pytest.approx(35.8)
     assert result["flow_densities"]["normal_density_kg_m3"] is not None
     assert result["report_projection"] is None
+
+
+def test_calculation_endpoint_returns_lhv_for_new_mtbe_component():
+    dependencies = build_web_dependencies()
+
+    response = TestClient(create_app(dependencies)).post(
+        "/api/calculations",
+        json=valid_methane_payload(
+            components=[
+                {
+                    "name": "MTBE",
+                    "percentage": 100.0,
+                }
+            ],
+            include_report_projection=False,
+        ),
+    )
+
+    assert response.status_code == 200
+    calculation = response.json()["calculation"]
+    assert calculation["mixture_lhv_mj_nm3"] == pytest.approx(139.9)
+    assert calculation["missing_lhv"] == []

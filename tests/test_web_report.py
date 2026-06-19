@@ -36,8 +36,10 @@ def methane_form(**overrides):
     return form
 
 
-def build_report_client(exporter):
-    base = build_web_dependencies(lhv_data={"methane": 35.8})
+def build_report_client(exporter, lhv_data=None):
+    base = build_web_dependencies(
+        lhv_data={"methane": 35.8} if lhv_data is None else lhv_data
+    )
     dependencies = WebDependencies(
         lhv_database=base.lhv_database,
         derive_composition_use_case=base.derive_composition_use_case,
@@ -94,3 +96,23 @@ def test_report_download_rejects_invalid_calculation_input():
     assert response.headers["content-type"].startswith("text/html")
     assert "total must be 100" in response.text
     assert exporter.request is None
+
+
+def test_report_download_includes_lhv_for_new_component():
+    exporter = RecordingReportExporter()
+    client = build_report_client(exporter, lhv_data={"MTBE": 139.9})
+
+    response = client.post(
+        "/calculator/report",
+        data=methane_form(component_name="MTBE"),
+    )
+
+    assert response.status_code == 200
+    workbook = load_workbook(BytesIO(response.content))
+    worksheet = workbook["Results"]
+    lhv_rows = [
+        row
+        for row in worksheet.iter_rows(values_only=True)
+        if row[0] == "Mixture LHV" and row[2] == "MJ/Nm³"
+    ]
+    assert lhv_rows[0][1] == 139.9

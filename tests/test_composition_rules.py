@@ -48,12 +48,12 @@ def test_molecular_weight_catalog_contains_requested_components():
     assert "n-butylene" not in MOLECULAR_WEIGHTS
     assert "2-butene" not in MOLECULAR_WEIGHTS
 
-    component_order = list(MOLECULAR_WEIGHTS)
-    nonane_index = component_order.index("nonane")
-    assert component_order[nonane_index + 1 : nonane_index + 3] == [
-        "decane",
-        "dodecane",
+    component_order = [
+        component_name
+        for component_name in MOLECULAR_WEIGHTS
+        if component_name.strip()
     ]
+    assert component_order == sorted(component_order, key=str.casefold)
 
 
 def test_water_fraction_uses_the_active_input_basis():

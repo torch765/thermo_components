@@ -4,6 +4,7 @@ from urllib.parse import urlencode
 from fastapi.testclient import TestClient
 
 from thermo_components.adapters.web.app import create_app
+from thermo_components.adapters.web.pages import COMPONENT_OPTIONS
 from thermo_components.bootstrap.web import build_web_dependencies
 
 
@@ -47,6 +48,14 @@ def test_calculator_page_renders_default_form():
     assert 'name="component_mole_percentage"' in response.text
     assert 'name="component_weight_percentage"' in response.text
     assert "Normalize active basis" in response.text
+
+
+def test_calculator_component_options_are_alphabetical():
+    component_names = [
+        component["value"] for component in COMPONENT_OPTIONS
+    ]
+
+    assert component_names == sorted(component_names, key=str.casefold)
 
 
 def test_calculator_alias_and_static_assets_are_available():

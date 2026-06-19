@@ -1,5 +1,10 @@
 ## DEVLOG
 
+### 2026-06-19
+- Completed LHV coverage for the expanded component catalog using documented NIST formation-enthalpy sources and rebuilt the bundled SQLite database with 45 current entries.
+- Removed obsolete butylene LHV aliases, made LHV lookup case-insensitive for canonical `MTBE` handling, and added coverage checks across domain, persistence, API, page, and Excel report paths.
+- Alphabetized component selection in both the web calculator and desktop application.
+
 ### 2026-06-18
 - Merged Web Phase 2 into `main` after a successful local `/health` smoke test.
 - Completed Web Phase 3 with typed calculation schemas, `POST /api/calculations`, web presenters, request-scoped thermo composition, validation/error mapping, and a real methane endpoint test.
